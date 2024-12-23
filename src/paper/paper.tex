@@ -1,10 +1,21 @@
-\documentclass[10pt]{../../sty/jskbook}
-\usepackage{../../sty/master_thesis}
-\usepackage{../../sty/private}
+\documentclass[10pt]{jskbook}
+\usepackage{../../sty/thesis}
+
+\title{共焦点顕微鏡で得られた4Dデータに対する\\リアルタイム複数物体追跡}
+\author{志村　駿}
 
 \begin{document}
+    % タイトル
     \maketitle
-    \clearpage
+    \cleardoublepage % 現在のページを終了
+    % 目次
+    \pagenumbering{roman} % 目次のページ数はローマ数字（i,ii,...）
+    \tableofcontents
+    \listoffigures % 図目次
+    \listoftables % 表目次
+    \cleardoublepage % 現在のページを終了して，次が右ページになるようにページを挿入する
+
+    \pagenumbering{arabic} % 本文のページ数はアラビア数字（1,2,...）
 
     \chapter{はじめに}
     \input{src/paper/part1.tex}

@@ -1,0 +1,60 @@
+
+
+% pakage =================================================%
+%=========================================================%
+
+% title ==================================================%
+
+\makeatletter % @で始まる変数を使用可能にする（\makeatotherで締める）
+
+\def\maketitle{ % title page の設定
+    \begin{titlepage}
+        \linewidth=\fullwidth
+        \setlength{\voffset}{-40pt}
+        \setlength{\hoffset}{40pt}
+        \addtolength{\textheight}{250mm}
+        \pagestyle{empty}
+        \hsize 45zw
+        \begin{center}
+            % title
+            \huge \bfseries 
+            \@title
+            \par
+            \vspace{300pt}
+            % supervisor
+            \Large \normalfont
+            指導教官 
+            \quad 
+            \lineskip .75em
+            \LARGE
+            \begin{tabular}[t]{l}
+                竹内　一郎
+            \end{tabular}
+            \par
+            % belong
+            \Large 
+            \vspace{60pt}
+            名古屋大学 \ 工学研究科 
+            \par \vspace{3pt}
+            機械システム工学専攻
+            \par \vspace{3pt}
+            データ駆動システム研究グループ
+            \par \vspace{10pt}
+            博士課程前期２年 \quad 
+            % name
+            \bfseries \LARGE
+            \@author 
+            \par \vspace{30pt}
+        \end{center}
+    \end{titlepage}
+}
+
+\makeatother
+
+%=========================================================%
+
+% parameters =============================================%
+%=========================================================%
+
+% renew ==================================================%
+%=========================================================%
