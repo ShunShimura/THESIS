@@ -1,0 +1,33 @@
+\documentclass[dvipdfmx,9pt,aspectratio=32]{beamer}
+\usepackage{../../sty/slide}
+
+    \title[short title]{\textbf{Title}}
+    \author[S.Shimura]{Shun Shimura}
+    \date[24/07/04]{July 4th,\ 2024}
+    \institute[Nagoya Univ.]{Nagoya Graduate School of Engineering / Machine Learning \& Data Science Laboratory}
+    %[]に省略名
+
+    \begin{document}
+
+        \begin{frame}
+            \maketitle
+            \thispagestyle{empty}%ヘッダーフッターなし
+            \addtocounter{framenumber}{-1}%ページ数カウンタしない
+        \end{frame}
+
+        \input{src/slide/part1.tex}
+
+        \input{src/slide/part2.tex}
+
+        \input{src/slide/part3.tex}
+
+        \input{src/slide/part4.tex}
+
+        \begin{frame}[noframenumbering, plain, allowframebreaks]{Reference}
+            \thispagestyle{empty}
+            \bibliographystyle{unsrt}
+            \bibliography{}
+            \beamertemplatetextbibitems
+        \end{frame}    
+
+    \end{document}
