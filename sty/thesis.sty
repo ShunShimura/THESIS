@@ -4,9 +4,7 @@
 %=========================================================%
 
 % title ==================================================%
-
 \makeatletter % @で始まる変数を使用可能にする（\makeatotherで締める）
-
 \def\maketitle{ % title page の設定
     \begin{titlepage}
         \linewidth=\fullwidth
@@ -48,12 +46,17 @@
         \end{center}
     \end{titlepage}
 }
-
 \makeatother
-
 %=========================================================%
 
 % parameters =============================================%
+% 本文幅の調整
+\setlength{\textwidth}{14cm}
+% マージンの調整（偶数ページと奇数ページで別に決める）
+\setlength{\oddsidemargin}{3pt} % 右ページの左側
+\setlength{\evensidemargin}{41pt} % 左ページの左側
+\setlength\voffset{-20pt}
+\setlength\footskip{2\baselineskip} % 本文の最後とフッターとの距離
 %=========================================================%
 
 % renew ==================================================%
