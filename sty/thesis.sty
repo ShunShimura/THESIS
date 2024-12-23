@@ -1,15 +1,27 @@
 
 
 % pakage =================================================%
+\usepackage[dvipdfmx]{graphicx} % figure
+\usepackage{amsmath,amssymb} % equation
 %=========================================================%
 
 % title ==================================================%
 \makeatletter % @で始まる変数を使用可能にする（\makeatotherで締める）
-\def\maketitle{ % title page の設定
+% title page用の変数定義
+\newcommand{\type}[1]{\gdef\@type{#1}} % 文書種類
+\newcommand{\university}[1]{\gdef\@university{#1}} % 大学名
+\newcommand{\department}[1]{\gdef\@department{#1}} % 学部名
+\newcommand{\course}[1]{\gdef\@course{#1}} % 所属専攻
+\newcommand{\chair}[1]{\gdef\@chair{#1}} % 所属グループ
+\newcommand{\grade}[1]{\gdef\@grade{#1}} % 学年
+\newcommand{\enauthor}[1]{\gdef\@enauthor{#1}} % 名前（英語ver.）
+\newcommand{\supervisor}[1]{\gdef\@supervisor{#1}} % 指導教官
+% title page の設定
+\def\maketitle{ 
     \begin{titlepage}
         \linewidth=\fullwidth
         \setlength{\voffset}{-40pt}
-        \setlength{\hoffset}{40pt}
+        \setlength{\hoffset}{0pt}
         \addtolength{\textheight}{250mm}
         \pagestyle{empty}
         \hsize 45zw
@@ -32,26 +44,40 @@
             % belong
             \Large 
             \vspace{60pt}
-            名古屋大学 \ 工学研究科 
+            \@university \ \@department
             \par \vspace{3pt}
-            機械システム工学専攻
+            \@course
             \par \vspace{3pt}
-            データ駆動システム研究グループ
+            \@chair
             \par \vspace{10pt}
-            博士課程前期２年 \quad 
+            \@grade \quad 
             % name
             \bfseries \LARGE
             \@author 
             \par \vspace{30pt}
         \end{center}
     \end{titlepage}
+    % authority page
+    \newpage
+    \thispagestyle{empty}
+    \setlength{\voffset}{0pt}
+    \null \vspace{500pt} % 本文の内容を空で埋める
+    \begin{flushleft} % 左寄せの内容
+        \Large
+        Copyright 
+        \copyright % © のこと
+        \enskip % 大きめの空白
+        \@enauthor
+        \par \vspace{10pt}
+        \@date
+    \end{flushleft}
 }
 \makeatother
 %=========================================================%
 
 % parameters =============================================%
 % 本文幅の調整
-\setlength{\textwidth}{14cm}
+\setlength{\textwidth}{13cm}
 % マージンの調整（偶数ページと奇数ページで別に決める）
 \setlength{\oddsidemargin}{3pt} % 右ページの左側
 \setlength{\evensidemargin}{41pt} % 左ページの左側
