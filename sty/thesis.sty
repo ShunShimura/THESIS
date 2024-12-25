@@ -1,10 +1,11 @@
 
 
 % pakage =================================================%
+\usepackage[dvipdfmx]{hyperref} % hyper reference
 \usepackage[dvipdfmx]{graphicx} % figure
 \usepackage{amsmath,amssymb} % equation
 \usepackage{bm} % bold font
-% \usepackage[dvipdfmx]{hyperref} % hyper reference
+\usepackage{fancyhdr} % header / footer
 %=========================================================%
 
 % title ==================================================%
@@ -22,8 +23,8 @@
 \def\maketitle{ 
     \begin{titlepage}
         \linewidth=\fullwidth
-        \setlength{\voffset}{-40pt}
-        \setlength{\hoffset}{0pt}
+        \setlength{\voffset}{-20pt}
+        \setlength{\hoffset}{-40pt}
         \addtolength{\textheight}{250mm}
         \pagestyle{empty}
         \hsize 45zw
@@ -32,7 +33,7 @@
             \huge \bfseries 
             \@title
             \par
-            \vspace{300pt}
+            \vspace{280pt}
             % supervisor
             \Large \normalfont
             指導教官 
@@ -77,18 +78,35 @@
 \makeatother
 %=========================================================%
 
+% header footer ==========================================%
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[RO]{\rightmark}
+\fancyfoot[RO]{\thepage}
+\fancyhead[LE]{\leftmark}
+\fancyfoot[LE]{\thepage}
+%=========================================================%
+
+
 % parameters =============================================%
 % 本文幅の調整
 \setlength{\textwidth}{13cm}
 % マージンの調整（偶数ページと奇数ページで別に決める）
-\setlength{\oddsidemargin}{3pt} % 右ページの左側
-\setlength{\evensidemargin}{41pt} % 左ページの左側
+\setlength{\oddsidemargin}{20pt} % 右ページの左側
+\setlength{\evensidemargin}{-20pt} % 左ページの左側
 \setlength\voffset{-20pt}
+\setlength{\textheight}{530pt}
 \setlength\footskip{2\baselineskip} % 本文の最後とフッターとの距離
 % counter類
 \setcounter{secnumdepth}{2} % [-1]:part(章)・[0]:chapter(部)・[1]:section(節)・[2]:subsection(項)・[3]:subsubsection(目)・[4]:paragraph(段落)
 \setcounter{tocdepth}{2} % 目次に出す深さ
 %=========================================================%
 
-% renew ==================================================%
-%=========================================================%
+% (re)new ==================================================%
+\fancypagestyle{fancy2}{
+    % ヘッダーとフッターの設定
+    \fancyhf{} % ヘッダーとフッターを初期化
+    \fancyfoot[RO]{\thepage} % ページ番号
+    \fancyfoot[LE]{\thepage} % ページ番号
+    \renewcommand{\headrulewidth}{0pt} % 横線消す
+}%=========================================================%

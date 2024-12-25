@@ -1,4 +1,4 @@
-\documentclass[11pt]{jskbook}
+\documentclass[11pt]{jsbook}
 \usepackage{../../sty/thesis}
 \usepackage{../../sty/private}
 
@@ -12,8 +12,11 @@
     % 目次
     \pagenumbering{roman} % 目次のページ数はローマ数字（i,ii,...）
     \tableofcontents
+    \thispagestyle{fancy2}
     \listoffigures % 図目次
+    \thispagestyle{fancy2}
     \listoftables % 表目次
+    \thispagestyle{fancy2}
     \cleardoublepage % 現在のページを終了して，次が右ページになるようにページを挿入する
 
     \pagenumbering{arabic} % 本文のページ数はアラビア数字（1,2,...）
