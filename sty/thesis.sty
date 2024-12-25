@@ -3,6 +3,8 @@
 % pakage =================================================%
 \usepackage[dvipdfmx]{graphicx} % figure
 \usepackage{amsmath,amssymb} % equation
+\usepackage{bm} % bold font
+% \usepackage[dvipdfmx]{hyperref} % hyper reference
 %=========================================================%
 
 % title ==================================================%
@@ -83,6 +85,9 @@
 \setlength{\evensidemargin}{41pt} % 左ページの左側
 \setlength\voffset{-20pt}
 \setlength\footskip{2\baselineskip} % 本文の最後とフッターとの距離
+% counter類
+\setcounter{secnumdepth}{2} % [-1]:part(章)・[0]:chapter(部)・[1]:section(節)・[2]:subsection(項)・[3]:subsubsection(目)・[4]:paragraph(段落)
+\setcounter{tocdepth}{2} % 目次に出す深さ
 %=========================================================%
 
 % renew ==================================================%
