@@ -16,7 +16,7 @@
 \par
 YOLO+SORTでは，前述の問題を物体検出とReIDという２つの処理に段階的に分けて解く．物体検出とは，ある画像を入力したときに，物体の存在する範囲をバウンディングボックスと呼ばれる矩形領域で検出し，なおかつ犬や猫，自動車といったクラス分類も同時に行うタスクのことをいう．また，画像内に複数の物体が存在していても，すべての各物体に対して同時に矩形領域検出・クラス分類を行う．YOLO（You Only Look Once）は，この物体検出用に開発された深層学習モデルである．またSORT（Simple Online Realtime Tracking）は，YOLOのような物体検出モデルから出力されたバウンディングボックスを入力とし，各個体の軌跡を推定する（図\ref{fig:yolosort}参照）．
 
-\begin{figure}[h]
+\begin{figure}[t]
     \centering    
     \includegraphics[width=.5\textwidth]{fig/nagoya-u.eps}
     \caption{YOLO+SORTの処理}
@@ -33,7 +33,7 @@ YOLO+SORTでは，前述の問題を物体検出とReIDという２つの処理�
     \item 各状態変数$\bm{s}_t^i$を，それに対応付けられたバウンディングボックス$\bm{o}_{t+1}^i$を用いて更新して$\bm{s}_{t+1}^i$とし，$S_{t+1}$に加える．
 \end{enumerate}
 
-\begin{figure}[h]
+\begin{figure}[t]
     \centering    
     \includegraphics[width=\textwidth]{fig/sort.pdf}
     \caption{SORTのアルゴリズム概要}
@@ -57,9 +57,57 @@ YOLO+SORTでは，前述の問題を物体検出とReIDという２つの処理�
 
 \begin{enumerate}
     \item 物体検出: YOLOv10により，画像を入力してその画像内の物体をバウンディングボックス$[x,y,w,h]$で検出する．
+    \item ReID: SORTと新たに提案するDepth-SORTにより，検出されたバウンディングボックスにIDを付与する．
+    \item 状態推定: 新しく設計したカルマンフィルタ，SliceKalmanFilterにより，所望の状態変数$[x,\dot{x},y,\dot{y},z,\dot{z},r]$を推定する．
 \end{enumerate}
 
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{fig/proposal.pdf}
+    \caption{提案手法の概要}
+    \label{fig:proposal}
+\end{figure}
+
+以降の節では，各パートについて詳細を述べる．
+
 \section{物体検出: YOLOv10}
+YOLO（You Only Look Once）は，物体検出を行う深層学習モデルであり，2016年から2024年までに，version 10（以降versionはvで表記する）まで開発されている．図\ref{fig:yolo_base}に示すように，YOLOは（１）画像の内部表現を獲得するBackbone，（２）バウンディングボックスや信頼度スコアに変換するHead，そして（３）冗長な出力を抑えるNon-Maximum Suppression（以降NMSと呼ぶ）で構成される．このうちBackboneとHeadはニューラルネットワークである．これにより，YOLO以前の手法と比較して格段に処理速度が向上し，YOLOはリアルタイム物体検出手法として確立した．以降，v1からv9に至るまで精度と処理速度の向上が図られてきた．
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{fig/yolo_base.pdf}
+    \caption{YOLOの基本的なアーキテクチャ}
+    \small
+    各図の下部にある$\mathbb{R}^{X}$は，各ステップにおける入力及び出力のテンソルもしくは行列のshapeを表している．ただしここでは初期モデルv1の値を参考にしている．またhead出力後の$30$は，$7 \times 7$のgrid上に区別された領域ごとに，信頼性スコア+バウンディングボックス情報の次元数$5$のベクトルを2つ候補として出力し，さらに$20$クラス分類するための確率を出力するため，$(5 \times 2) + 20 = 30$となっている．ここでは，説明を簡易化するためにNeckを省略した．
+    \label{fig:yolo_base}
+\end{figure}
+
+しかしながら，唯一ニューラルネットワークを使用しないNon-Maximum Suppressionは，v9に至るまで処理速度を下げてしまう大きな要因であった．そこで2024年に発表されたv10\cite{wang2024yolov10}では，NMSを取り除き，dual-assignmentという機構を用いることでEnd-to-Endなニューラルネットワークとなっている．これにより図\ref{fig:yolov10_performance}に示すように，v10はv9の２倍ほどの高速化に成功している．
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{fig/yolov10_performance.pdf}
+    \caption{yoloのバージョン比較（（左）性能と推論速度（右）性能とモデルパラメータ数）}
+    \small
+    縦軸の\textrm{COCO AP}が性能，横軸の\textrm{Latency}は推論にかかる時間，\textrm{Number of Parameters}はモデルの大きさを表す．
+    \label{fig:yolov10_performance}
+\end{figure}
+
+前述のとおり本研究ではリアルタイム処理を行うため，少なくとも$n_s$枚の画像の物体検出を時間間隔$dt$以内に終わらせなければならない．そのため，本研究ではもっとも精度-推論時間のバランスが優れているYOLOv10を採用した．
+
+\subsection{YOLOv10のアーキテクチャ}
+%%% suspend
+%%% 全体のアーキテクチャ，backbone，neck, dual-assignment
+
+\subsection{YOLOv10の学習手順}
+YOLOv10の学習では，一般公開されているPre-Trainingされたモデルをダウンロードし，Fine-Tuningを行う．Pre-TrainingとFine-Tuningとは，大規模なデータセットでモデルを学習させた後（Pre-Training），その学習されたパラメータを初期値として小規模なデータセットでさらにモデルを微調整する（Fine-Tuning），学習方法の一つである\cite{radford2018improving}．特に，応用面での学習データセットが少ない場合や，汎化的なモデルを構築したいときに用いられる学習方法である．例えば物体検出であれば，すでに大規模なデータセットが溢れている画像分類で事前学習を行い，その後に小規模な物体検出用のデータセットで学習を行う．これにより，事前学習で画像の良い表現学習が行われるため，物体検出を学習させる際のデータセットは小規模で済む．Fine-Tuningでは図\ref{fig:PTandFT}のように，ニューラルネットワークの最終層のみを学習させるのが一般的である．
+
+\begin{figure}[t]
+    \centering    
+    \includegraphics[width=\textwidth]{fig/PTandFT.pdf}
+    \caption{Pre-TrainingとFine-Tuning}
+    \label{fig:PTandFT}
+\end{figure}
 
 \section{ReID: SORT+DepthSORT}
 
