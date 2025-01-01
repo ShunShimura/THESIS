@@ -110,5 +110,51 @@ YOLOv10の学習では，一般公開されているPre-Trainingされたモデ�
 \end{figure}
 
 \section{ReID: SORT+DepthSORT}
+既存手法のSORTでは，時刻$t$において時刻$t+1$の画像から検出されたバウンディングボックスのうち，いずれが時刻$t$まで追跡してきた物体と同物体であるのか，もしくは新しく増えた物体なのかを割り当てていた．またそのためにカルマンフィルタで予測を行っていた．
+\par
+本問題設定でも同様に，新しく時刻$t+1$の複数画像から検出されたバウンディングボックスのうち，いずれが時刻$t$まで追跡してきた物体と同物体であるかを計算し，IDを割り当てる．ただし本問題設定では一つのバウンディングボックスに決まらず，複数のスライスに同物体が検出されることに注意されたい．
+\par
+ある時刻$t$において，同物体由来の複数のバウンディングボックスに同じIDを割り当てるために，Depth-SORTという処理を提案する．Depth-SORTでは，従来のSORTが時間$t$方向に物体の追跡を行っていたのに対し，深さ$z$方向に物体の追跡を行う．ある時刻において複数のスライスが得られたときに，近い位置で検出されたバウンディングボックスは，同物体由来である確率が非常に高い．なぜならば，深さ方向への時間変位は時間方向のものよりも短いためである．これによって，時刻$t$のバウンディングボックスを個体ごとに仕分けることができる．
+\par
+以上の議論の定式化を行う．まず時刻$t$において，$n_s$枚のスライスを物体検出器YOLOv10に入力し得られたバウンディングボックス群$\mathcal{O}_t$を
+\begin{equation}
+    \begin{aligned}
+        \mathcal{O}_t &= \left\{O_{t, 1}, O_{t,2},...,O_{t,n_s}\right\}
+        \\ O_{t,z} &= \left\{\bm{o}_{t,z}^1, \bm{o}_{t,z}^2,...\right\}
+    \end{aligned}
+\end{equation}
+と表す．Depth-SORTは$\mathcal{O}_t$を入力としてアルゴリズム\ref{alg:Depth-SORT}を実行する．
+\begin{algorithm}[H]
+    \caption{Depth-SORT}
+    \label{alg:Depth-SORT}
+    \begin{algorithmic}[1]
+        \REQUIRE $O_{t,1}, O_{t,2}, ..., O_{t,n_s}$
+        \ENSURE $B$ \text{\# IDをkeyとしたバウンディングボックス集合}
+        \STATE \textbf{Initialize}: $B = \emptyset,\ T = \emptyset$
+        \FOR {$\bm{o} \in O_{t,1}$}
+            \STATE $T \leftarrow T \cup kalman\_initialize(\bm{o})$ \text{\# 各物体に対してカルマンフィルタの初期化}
+        \ENDFOR
+        \FOR {$z = 1$ to $n_s - 1$}
+            \STATE $P = \emptyset$ \text{\# 予測位置集合の初期化}
+            \FOR {$t \in T$}
+                \STATE $P \leftarrow P \cup kalman\_predict(t)$ \text{\# 各物体に対してカルマンフィルタの時間更新}
+            \ENDFOR
+            \STATE $pair\_idx \leftarrow hungarian\_matching(P, O_{t,z+1})$ \text{\# 予測と検出のマッチング}
+
+            \FOR {$i_t, i_o \in pear\_idx$}
+            \IF {$i_t == \textrm{None}$}
+                \STATE $T \leftarrow T \cup kalman\_initialize(O_{t,z+1}[i_o])$ \text{\# 新しい物体の追跡を開始}
+            \ELSIF {$o_t == \textrm{None}$}
+                \STATE $T \leftarrow T\ /\ T[i_t]$ \text{\# 途切れたら追跡を終える}
+            \ELSE 
+                \STATE $T[i_t] \leftarrow kalman\_update(O_{t,z}[i_o])$ \text{\# カルマンフィルタの観測更新}
+            \ENDIF
+    \ENDFOR
+        \ENDFOR
+        \RETURN $track\_to\_bboxes(T)$
+    \end{algorithmic}
+\end{algorithm}
+
+ここで出力されたバウンディングボックス集合$B$は，IDを割り当てられた時刻$t$のバウンディングボックス群をIDで振り分けたものである．
 
 \section{状態変数の推定: SliceKalmanFilter}

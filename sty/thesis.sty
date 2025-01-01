@@ -7,6 +7,7 @@
 \usepackage{bm} % bold font
 \usepackage{fancyhdr} % header / footer
 \usepackage{cite} % reference citation
+\usepackage{algorithm,algorithmic} % pseudo code
 %=========================================================%
 
 % title ==================================================%
@@ -110,4 +111,7 @@
     \fancyfoot[RO]{\thepage} % ページ番号
     \fancyfoot[LE]{\thepage} % ページ番号
     \renewcommand{\headrulewidth}{0pt} % 横線消す
+% pseudocodeのinputとoutput表示
+\renewcommand{\algorithmicrequire}{\textbf{Input:}}
+\renewcommand{\algorithmicensure}{\textbf{Output:}}
 }%=========================================================%
