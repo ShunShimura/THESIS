@@ -113,7 +113,9 @@ YOLOv10の学習では，一般公開されているPre-Trainingされたモデ�
 既存手法のSORTでは，時刻$t$において時刻$t+1$の画像から検出されたバウンディングボックスのうち，いずれが時刻$t$まで追跡してきた物体と同物体であるのか，もしくは新しく増えた物体なのかを割り当てていた．またそのためにカルマンフィルタで予測を行っていた．
 \par
 本問題設定でも同様に，新しく時刻$t+1$の複数画像から検出されたバウンディングボックスのうち，いずれが時刻$t$まで追跡してきた物体と同物体であるかを計算し，IDを割り当てる．ただし本問題設定では一つのバウンディングボックスに決まらず，複数のスライスに同物体が検出されることに注意されたい．
-\par
+
+\subsection{Depth-SORT}
+
 ある時刻$t$において，同物体由来の複数のバウンディングボックスに同じIDを割り当てるために，Depth-SORTという処理を提案する．Depth-SORTでは，従来のSORTが時間$t$方向に物体の追跡を行っていたのに対し，深さ$z$方向に物体の追跡を行う．ある時刻において複数のスライスが得られたときに，近い位置で検出されたバウンディングボックスは，同物体由来である確率が非常に高い．なぜならば，深さ方向への時間変位は時間方向のものよりも短いためである．これによって，時刻$t$のバウンディングボックスを個体ごとに仕分けることができる．
 \par
 以上の議論の定式化を行う．まず時刻$t$において，$n_s$枚のスライスを物体検出器YOLOv10に入力し得られたバウンディングボックス群$\mathcal{O}_t$を
@@ -124,7 +126,8 @@ YOLOv10の学習では，一般公開されているPre-Trainingされたモデ�
     \end{aligned}
 \end{equation}
 と表す．Depth-SORTは$\mathcal{O}_t$を入力としてアルゴリズム\ref{alg:Depth-SORT}を実行する．
-\begin{algorithm}[H]
+
+\begin{algorithm}[t]
     \caption{Depth-SORT}
     \label{alg:Depth-SORT}
     \begin{algorithmic}[1]
@@ -157,4 +160,244 @@ YOLOv10の学習では，一般公開されているPre-Trainingされたモデ�
 
 ここで出力されたバウンディングボックス集合$B$は，IDを割り当てられた時刻$t$のバウンディングボックス群をIDで振り分けたものである．
 
+\subsection{SORTとDepth-SORTの統合}
+ここでは，従来の時間方向の対応付け（SORT）と空間方向の対応付け（Depth-SORT）の時刻$t$における統合処理について述べる．従来のSORTのみでは，単一スライスの時系列データしか扱えないため，追跡していた物体がそのスライス画像に映らなくなったときに，追跡が途切れてしまう．そこで，時刻$t$におけるスライスごとの時間方向のマッチングの後，Depth-SORTを行い，追跡してきたIDとDepth-SORTから出力されたID間のマッチングを図る．
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{fig/sort+depthsort.pdf}
+    \caption{SORT+Depth-SORTの概略図}
+    \label{fig:sort+depthsort}
+\end{figure}
+
+具体的な処理をアルゴリズム\ref{alg:sort+depthsort}に載せる．
+
+\begin{algorithm}[t]
+    \caption{SORT + Depth-SORT}
+    \label{alg:sort+depthsort}
+    \begin{algorithmic}[1]
+        \REQUIRE $S_t, O_t = \left\{ O_{t,1}, O_{t,2}, ..., O_{t,n_s} \right\}$
+        \ENSURE $B$ \text{\# ID, 時刻$t$, スライス$s$をkeyとしたバウンディングボックス集合}
+        \STATE \textbf{Initialize}: $B = \emptyset$
+        \FOR {$z = 1$ to $n_s - 1$}
+            \STATE $B_z^{time} \leftarrow sort(S_t[z], O_{t,z})$ \text{\# time-directional matching}
+        \ENDFOR
+        \STATE $B^{time} \leftarrow \left\{ \left. B_z^{time} \right| z = 1,2,...,n_s \right\}$
+        \STATE $B^{depth} \leftarrow depth\_sort(O_t)$ \text{\# depth-directional matching}
+        \STATE $C_{id} \leftarrow calc\_bt\_in\_bd(B^{time}, B^{depth})$
+        \FOR {$(i_t, i_d)$ in $hungarian\_matching(C_{id})$}
+            \IF {$i_d \text{ is not None}$}
+                \STATE $B_{i_t} \leftarrow convert(B^{depth}_{i_d})$
+            \ELSE
+                \STATE $B_{i_t} \leftarrow \textrm{None}$
+            \ENDIF
+        \ENDFOR
+        \RETURN $B$
+    \end{algorithmic}
+\end{algorithm}
+
+ここで入力の$S_t$は，\ref{eq:states}のようになっている．$\bm{s}^{(i)}_{t,z}$は，3.1節におけるバウンディングボックスの状態変数と同様である．
+
+\begin{equation}
+    \label{eq:states}
+    \begin{aligned}
+        S_t &= \left\{ \left. S_t^{(i)} \right| \text{$i$は各物体のID} \right\}
+        \\ S_t^{(i)} &= \left\{ \left. \bm{s}_{t,z}^{(i)} \right| z = 1,2,...,n_s \right\}
+    \end{aligned}
+\end{equation}
+
+また，$B^{time}$と$B^{depth}$にはそれぞれ，SORTとDepth-SORTによって得られたID付きのバウンディングボックスの集合が与えられている．ここで，２つの集合のIDマッチングを行う．マッチングのコスト行列$C_{id}$の各要素$c_{ij}$は，式\ref{eq:id_cost}で与えられる．すなわち，$B^{time}_i$のバウンディングボックスが$B^{depth}_j$に多く含まれるほど，$i$と$j$は同個体と考えられ，対応付けられやすくなる．
+
+\begin{equation}
+    \label{eq:id_cost}
+    \begin{aligned}
+        &c_{ij} = - \sum_k \mathbbm{1}_{B_j^{depth}}\left[ B_{ik}^{time} \right]
+        \\&\mathbbm{1}_{A}[x] = \left\{
+        \begin{gathered}
+            1 \quad (x \in A)
+            \\0 \quad (x \notin A)
+        \end{gathered}
+        \right.
+    \end{aligned}
+\end{equation}
+
+また出力の$B$は同様にIDをkeyとしたバウンディングボックスの集合で与えられる．ただし$convert$関数により，式\ref{eq:convert}のように変形している．
+
+\begin{equation}
+    \label{eq:convert}
+    \begin{aligned}
+        B &= \left\{ \left. B_i \right| \text{IDが$i$の個体の出力}\right\}
+        \\ B_i &= \left\{ \left. \bm{b}_s^{(i)} \right| \bm{b}_s = \left[x_s, y_s, w_s, h_s\right]\right\}
+    \end{aligned}
+\end{equation}
+
 \section{状態変数の推定: SliceKalmanFilter}
+最後に，バウンディングボックス群$B_i$から状態変数$\left[x,\dot{x}, y, \dot{y}, z, \dot{z}, r\right]$を推定するカルマンフィルタの設計を行う．そのまえに，一般的な線形カルマンフィルタの説明を述べる．
+
+\subsection{一般線形カルマンフィルタ}
+
+一般線形カルマンフィルタは，観測系列$\bm{y}_1,..., \bm{y}_t$が得られたときに，状態変数$\bm{x}_t$の良い推定値$\hat{\bm{x}}_t$を得ることを目的とする最適化手法である．ここで観測変数$\bm{y}_t$はセンサーなどで得られるデータであり，状態変数$\bm{x}_t$はシステム内部で働く，推定したい変数である．またこちら側が制御できる変数$\bm{u}_t$をシステムへ入力することもある．ここでは後述の問題に対応するために，システム入力$\bm{u}_t$が，観測$\bm{y}_t$に変換$G_t$を通して影響を及ぼすと仮定する．一般線形カルマンフィルタでは，これらの変数は線形な式\ref{eq:kf_setting}に従うと仮定する．
+
+\begin{equation}
+    \label{eq:kf_setting}
+    \begin{aligned}
+        \bm{x}_{t+1} &= F_t \bm{x}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
+        \\ \bm{y}_t &= H_t \bm{x}_t + G_t \bm{u}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
+    \end{aligned}
+\end{equation}
+
+カルマンフィルタでは，$\bm{x}_t$を確率変数とみなし，その確率が最大になるように推定を行う．そのため，観測系列$\bm{y}_1, ..., \bm{y}_j$が得られたときの確率変数$\bm{x}_k$の推定値$\bm{x}_{k|j}$は，式\ref{eq:kalman_map}で与えられる．
+
+\begin{equation}
+    \label{eq:kalman_map}
+    \bm{x}_{k|j} = \underset{\bm{x}_k \in \mathbb{R}^{n}}{\textrm{argmax}}\ p(\left. \bm{x}_k \right| \bm{y}_1,..., \bm{y}_j )
+\end{equation}
+
+ここからは，事後確率$p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t )$の変形を考える．ベイズの定理から，
+
+\begin{equation}
+    \begin{aligned}
+        p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) &= \frac{p(\left. \bm{y}_t \right| \bm{y}_1,..., \bm{y}_{t-1}, \bm{x}_t) p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}{p(\left.\bm{y}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}
+    \end{aligned}
+\end{equation}
+
+と表せられる．さらに式\ref{eq:kf_setting}より，$\bm{y}_t$にはマルコフ性が成立するから，
+
+\begin{equation}
+    \label{eq:filtering}
+    \begin{aligned}
+        p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) &= \frac{p(\left. \bm{y}_t \right| \bm{x}_t) p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}{p(\left.\bm{y}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}
+    \end{aligned}
+\end{equation}
+
+と変形できる．
+\par 
+次に，右辺の分子後半部$p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})$について考える．確率分布の性質から，
+
+\begin{equation}
+    \begin{aligned}
+        p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) &= \int p(\left.\bm{x}_t, \bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
+        \\ &= \int p(\left.\bm{x}_t\right|\bm{x}_{t-1}, \bm{y}_1,..., \bm{y}_{t-1}) p(\left.\bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
+    \end{aligned}
+\end{equation}
+
+と変形できる．また先程と同様に，$\bm{x}_t$のマルコフ性から，
+
+\begin{equation}
+    \label{eq:updating}
+    \begin{aligned}
+        p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) = \int p(\left.\bm{x}_t\right|\bm{x}_{t-1}) p(\left.\bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
+    \end{aligned}
+\end{equation}
+
+式\ref{eq:filtering}と\ref{eq:updating}から，初期値$p(\bm{x}_0 | \bm{y}_0) = p(\bm{x}_0)$があれば，すべての時刻$1,...,t$における$p(\bm{x_t} | \bm{y}_1,..., \bm{y}_t)$及び$p(\bm{x}_t | \bm{y}_1,..., \bm{y}_{t-1})$が理論的には計算できる．しかしながら，式\ref{eq:filtering}の分母や式\ref{eq:updating}には積分計算が必要なため，現実的には計算できない．そのため，線形カルマンフィルタでは式\ref{eq:kf_setting}に見られる線形性を仮定している．
+\par
+式\ref{eq:kf_setting}より，
+
+\begin{equation}
+    \begin{aligned}
+        p(\left.\bm{x}_t\right|\bm{x}_{t-1}) &= \mathcal{N}(F_{t-1} \bm{x}_{t-1}, Q_{t-1})
+        \\ p(\left. \bm{y}_t \right| \bm{x}_t) &= \mathcal{N}(H_t \bm{x}_t + G_{t} \bm{u}_{t}, R_t)
+    \end{aligned}
+\end{equation}
+
+である．よって，初期値$\bm{x}_0$が正規分布に従うのであれば，２つの事後確率分布$p(\bm{x_t} | \bm{y}_1,..., \bm{y}_t)$及び$p(\bm{x}_t | \bm{y}_1,..., \bm{y}_{t-1})$も正規分布に従う．ここで便宜上のため$p(\bm{x_k} | \bm{y}_1,..., \bm{y}_j) = \mathcal{N}(\bm{\mu}_{k|j}, \Sigma_{k|j})$と表すと，
+
+\begin{equation}
+    \label{eq:mu_sigma}
+    \begin{aligned}
+        \bm{\mu}_{t|t-1} &= F_{t-1} \bm{\mu}_{t-1|t-1}
+        \\\Sigma_{t|t-1} &= F_{t-1} \Sigma_{t-1|t-1} F_{t-1}^{\top} + Q_{t-1}
+        \\\bm{\mu}_{t|t} &= \Sigma_{t|t} \left( H_t R_t^{-1} \bm{y}_t + \Sigma_{t|t-1}^{-1} \bm{\mu}_{t|t-1} \right)
+        \\\Sigma_{t|t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t|t-1}^{-1}\right)^{-1}
+    \end{aligned}
+\end{equation}
+
+と計算で求めることができる．
+\par
+
+一般線形カルマンフィルタでは，状態変数$\bm{x}_t$の事後確率はすべて正規分布で表せることができた．推定値は，この事後確率を最大化することによって与えられる．すなわち，各時刻$t$における推定値$\hat{\bm{x}}_{t|t-1}$及び$\hat{\bm{x}}_{t|t}$はそのまま正規分布の平均値で与えられる．以上より，一般線形カルマンフィルタの最適解は式\ref{eq:kf_optimal}である．
+
+\begin{equation}
+    \label{eq:kf_optimal}
+    \begin{aligned}
+        \hat{\bm{x}}_{t|t-1} &= \bm{\mu}_{t|t-1}
+        \\ \hat{\bm{x}}_{t|t} &= \bm{\mu}_{t|t}
+    \end{aligned}
+\end{equation}
+
+また式\ref{eq:mu_sigma}において，右辺に出てくる$\bm{\mu}$には一時刻前などの推定値$\hat{\bm{x}}$が代入される．これにより，逐次的に式\ref{eq:filtering}と\ref{eq:updating}を行うことで推定値を計算することができる．
+
+\subsection{拡張カルマンフィルタ}
+
+式\ref{eq:kf_setting}で仮定した通り，一般線形カルマンフィルタは線形なシステムの推定にしか適していない．非線形なシステムに対しても，良い精度で推定を行えるように改良されたカルマンフィルタの一つが拡張カルマンフィルタである．ここでは後述の問題に対応するため，観測写像のみが非線形な場合を考える．
+\par
+観測写像を$h(\bm{x})$と定義すると，観測方程式は式\ref{eq:nonlinear_observation}で表せられる．
+
+\begin{equation}
+    \label{eq:nonlinear_observation}
+    \bm{y}_t = h(\bm{x}_t) + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
+\end{equation}
+
+ここで$h(\bm{x}_t)$の近似を考える．ある状態推定値$\hat{\bm{x}_t}$の周りでTaylor展開を行うと，
+
+\begin{equation}
+    \begin{aligned}
+        h(\bm{x}_t) &\simeq h(\hat{\bm{x}_t}) + \left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}} \left( \bm{x}_t - \hat{\bm{x}_t} \right) + \mathcal{O}(\bm{x}_t^2)
+        \\ &= \left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}} \bm{x}_t + h(\hat{\bm{x}_t}) - \left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}} \hat{\bm{x}_t} + \mathcal{O}(\bm{x}_t^2)
+    \end{aligned}
+\end{equation}
+
+と変形できる．ここで$H_t \equiv \left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}}$とおき，右辺の第二項以降を$G_t\bm{u}_t$とおくと，これは式\ref{eq:kf_setting}の観測方程式と一致する．
+\par
+以上の議論より，一般線形カルマンフィルタにおける$H_t \bm{x}_t + G_t \bm{u}_t$の部分を$h(\bm{x}_t)$，$H_t$のみの部分を$\left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}}$とおけば，一般線形カルマンフィルタの枠組みで計算可能である．すなわち，観測写像$h(\bm{x})$が明示的に与えられており，なおかつ一階微分可能であれば，非線形なシステムに拡張カルマンフィルタを用いることができる．
+
+\subsection{SliceKalmanFilterの設計}
+
+提案するSliceKalmanFitlerの状態変数$\bm{x}_t$は，第二章で述べたとおり，式\ref{eq:SKFstate}で表せられる．ここで$(x,y,z)$は球体の中心座標，$(\dot{x}, \dot{y}, \dot{z})$はその速度，$r$は半径を表す．
+
+\begin{equation}
+    \label{eq:SKFstate}
+    \bm{x}_t = \left[x, \dot{x}, y, \dot{y}, z, \dot{z}, r\right]
+\end{equation}
+
+一方観測変数$\bm{y}_t$は，前述のSORT+Depth-SORTが出力する，IDごとのバウンディングボックス集合（式\ref{eq:SKFinput}参照）を平坦化したベクトルである．
+
+\begin{equation}
+    \label{eq:SKFinput}
+    \begin{aligned}
+        \bm{y}_t &= \textrm{Flatten}(\left\{ \left. \bm{o}_z \right| z \in \mathcal{S}_t \right\})
+        \\\bm{o}_z &= \left[x_z, y_z, w_z, h_z\right]
+    \end{aligned}
+\end{equation}
+
+ただしここでは，スライスのインデックス集合$\mathcal{S}_t$が，$\mathcal{S}_t \subseteq  \left\{1,2,...,n_s\right\}$であることに注意されたい．なぜならば，ある個体が常にすべてのスライスにおいて検出されるわけではないためである．すなわち観測変数$\bm{y}_t$の長さは，個体や時刻によって変化しうる．よって，観測写像$h_t(\cdot)$もそれに応じて変化する．
+\par
+まずは，ある単一のスライス$s$における観測写像$h_s(\bm{x}_t)$を考える．2.1及び式\ref{eq:slice-time}で述べたように，スライスには有限の取得時間がかかるため，スライス$s$が取得される時刻は$t+\tau(s)$である．さらにその際に検出されるバウンディングボックスの幅$w$と$h$はスライスの高さと球体の中心距離に依存して変化する．これを考慮すると，
+
+\begin{equation}
+    \label{eq:slice_observation_map}
+    \begin{aligned}
+        h_s(\bm{x}_t) &= \left[x_s, y_s, w_s, h_s\right]
+        \\ x_s &= x + \dot{x} \tau(s)
+        \\ y_s &= y + \dot{y} \tau(s)
+        \\ z_s &= z + \dot{z} \tau(s)
+        \\ w_s &= h_s = 2 \sqrt{r^2 - (z_s - z(s))^2}
+    \end{aligned}
+\end{equation}
+
+ここで$z(s)$は，単一スライス$s$の焦点が合っている物理的な高さを表す．式\ref{eq:slice_observation_map}からも分かる通り，この計算は$\left|r^2 - (z_s - z(s))^2\right| > 0$のときのみ行われる．また，明らかに観測変数と$h(\bm{x}_t)$及び$H_t \bm{x}_t$の次元数は一致していなければならないため，結局全体の観測写像$h(\bm{x}_t)$は式\ref{eq:whole_obs_map}で表せられる．
+
+\begin{equation}
+    \label{eq:whole_obs_map}
+    h(\bm{x}_t) = \text{Flatten}(\left\{ \left. h_s(\bm{x_t}) \right| s \in \mathcal{S}_t \land \left|r^2 - (z_s - z(s))^2\right| > 0 \right\})
+\end{equation}
+
+また同様の議論から，観測変数$\bm{y}_t$にも修正を加え，式\ref{eq:modify_obs}で表す．
+
+\begin{equation}
+    \label{eq:modify_obs}
+    \bm{y}_t = \text{Flatten}(\left\{ \left. \bm{o}_z \right| z \in \mathcal{S}_t \land  \left|r^2 - (z_s - z(s))^2\right| > 0 \right\})
+\end{equation}
+
+観測行列$H_t$については，式\ref{eq:whole_obs_map}を状態変数$\bm{x}_t = \left[x,\dot{x},y,\dot{y},z, \dot{z},r\right]$の各成分ごとに微分し，推定値$\hat{\bm{x}}_{t|t-1}$及び$\hat{\bm{x}}_{t|t}$を適宜代入することで得られる．
