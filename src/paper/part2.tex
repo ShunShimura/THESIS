@@ -72,6 +72,92 @@
 
 \section{問題設定の一般化及び定式化}
 
+この章では，これまでに議論した問題設定を一般化しながら定式化を行う．
+\par
+まずは，遊離した細胞の定式化を行う．植物の根からプロトプラスト化し，酵素溶液中に遊離した細胞は，図\ref{fig:protoplast}にあるように球体としてみなせる．この球体の位置や大きさを表す変数として，状態変数ベクトル$\bm{s}(t) \in \mathbb{R}^n$を定義する．ここで$n$はその特徴量の個数であり，$t$は連続的な時刻である．前述のとおり，遊離した細胞は流体環境にさらされている．そのため，外乱に依存する加速度まで状態変数に加えるべきであるが，実際に取得したデータからあまり大きな外力に起因する挙動が見られなかったため，状態変数ベクトル$\bm{s}(t)$は，式\ref{eq:state_vector}とする．
+
+\begin{equation}
+    \label{eq:state_vector}
+    \bm{s}(t) \equiv \left[x(t), \dot{x}(t), y(t), \dot{y}(t), z(t), \dot{z}(t), r(t)\right]^{\top}
+\end{equation}
+ここで，$\dot{A}(t)$は一階時間微分$dA/dt$を表す．また，$r(t)$は球体の半径である．また細胞は同時刻に複数個存在するため，ある時刻$t$において存在する各細胞の状態変数集合$S(t)$を，
+
+\begin{equation}
+    S(t) \equiv \left\{\left.\bm{s}^{(i)}(t)\right| i \in \mathbb{N}_{\geq 0}\right\}
+\end{equation}
+と表す．ここで$i$は遊離した細胞を識別するためのIDを示している．
+ここまでは連続的な時間で状態変数を考えてきたが，一般に計算機で何かしらの処理を行う際は離散化が必要である．そのため，離散的な状態変数ベクトル$\bm{s}_t$と状態変数集合$S_t$を新たに式\ref{eq:discreation}で定義する．
+
+\begin{equation}
+    \label{eq:discreation}
+    \begin{aligned}
+        \bm{s}_t &\equiv \left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]
+        \\ S_t &\equiv \left\{\left.\bm{s}^{(i)}_t\right| i \in \mathbb{N}_{\geq 0}\right\}
+    \end{aligned}
+\end{equation}
+また流体外乱や細胞同士の相互作用の効果として，加速度を正規ホワイトノイズとして加算する．よって時間遷移は式\ref{eq:time_transition}で表せられる．ただしここでは冗長性のため$x$のみの遷移を記述した．
+
+\begin{equation}
+    \label{eq:time_transition}
+    \begin{aligned}
+        x_{t+1} &= x_t + \dot{x}_t dt + \frac{1}{2} a_x dt^2
+        \\ \dot{x}_{t+1} &= \dot{x}_t + a_x dt
+        \\ a_x & \sim \mathcal{N}(0, A_x)
+    \end{aligned}
+\end{equation}
+ここで$dt$は有限な時間変位，$a_x$は正規ホワイトノイズ，$A_x$はその分散である．また半径$r_t$は定常なものとする．
+\par
+次に，共焦点顕微鏡から得られる複数のスライス画像の定式化を行う．共焦点顕微鏡は，焦点面を調整することで複数の高さにおけるスライス画像を得ることができる顕微鏡であった．この特性を用いて，本システムでは焦点面を変えながら図\ref{fig:slicing}のように複数の高さにおけるスライス画像を取得する．このスライスの枚数を$n_s$と定義する．この$n_s$枚のスライス画像取得を一時刻分の入力データとすると，ある時刻$t$における入力データ$\mathcal{X}_t$は，
+
+\begin{equation}
+    \begin{aligned}
+        \mathcal{X}_t &\equiv \left\{ \left.X^{(t,s)}\right| s \in \left\{1,2,\dots,n_s\right\} \right\}
+        \\ X^{t,s} &\in \mathbb{R}^{W \times H \times 3}
+    \end{aligned}
+\end{equation}
+と表せられる．ここで$s$はスライスの高さと対応づいている．本論文では，$s=0$が３次元空間内で最も$z$が小さい点に対応しているとする．また$W$は取得画像のピクセル幅，$H$はピクセル高さ，$3$はRGBに対応している．
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{fig/slicing.pdf}
+    \caption{得られる共焦点画像のイメージ}
+    \small
+    $n_s=10$の例を示している．また最下部が$s=0$とされていることに注意されたい．
+    \label{fig:slicing}
+\end{figure}
+
+\par
+最後に，AIシステムが出力する細胞の予測及び遊離直後の予測の定式化を行うが，便宜上のために追跡しているトラックの定式化を先に行う．時刻$t$において追跡している情報の集合$\mathcal{T}_t$を，
+
+\begin{equation}
+    \begin{aligned}
+        \mathcal{T}_t &\equiv \left\{ \left. T_t^{(i)}\right|i \in \mathcal{I}_t\right\}
+        \\ T_t^{(i)} &\equiv \left\{ \hat{\bm{s}}_t \left|\ t \in \left\{t_s^{(i)}, t_s^{(i)}+1,\dots, t\right\} \right.\right\}
+        \\\hat{\bm{s}}_{t} &\equiv \left[\hat{x}_{t}, \hat{\dot{x}}_{t}, \hat{y}_{t}, \hat{\dot{y}}_{t}, \hat{z}_{t}, \hat{\dot{z}}_{t}, \hat{r_{t}}\right]
+    \end{aligned}
+\end{equation}
+と定義しておく．ここで$\mathcal{I}_t$は時刻$t$において追跡している細胞のID集合，$t_s^{(i)}$は，細胞$i$が遊離した直後の時刻，$\hat{A}$は$A$の推定値を表す．
+
+節2.1.2で議論したように，細胞の予測では位置に加えて速度や加速度の予測も行うことが望ましい．しかしながら本節での一般化で，加速度が正規ホワイトノイズであることを仮定した．よって本論文では，位置，速度そして半径の予測を行う．すなわち時刻$t$における予測$S^{\text{pred}}_t$は，
+
+\begin{equation}
+    \begin{aligned}
+        S^{\text{pred}}_t &\equiv \left\{ \left. \hat{\bm{s}}_t^{(i)}\right| i \in \mathcal{I}_t\right\}
+    \end{aligned}
+\end{equation}
+と表す．これはすなわち，式\ref{eq:discreation}で示した細胞の状態変数を推定することと等価である．またここでの細胞IDである$i$は式\ref{eq:discreation}に一致する必要がなく，識別が可能であれば十分であることに注意されたい．
+\par
+また遊離直後の位置に関しても，冗長である可能性ももちろんあるが，位置だけでなく大きさを示す半径や，プロトプラスト化した際の方向に関連する速度は有益な情報になる．そのため予測同様，状態変数ベクトルの集合を出力させる．ただし，ここで出力するのは時刻$t$の状態変数ではなく，各細胞が遊離した直後の時刻$t_s^{(i)}$であることに注意されたい．すなわち時刻$t$における各細胞の遊離直後位置の情報$S^{\text{init}}_t$は，
+
+\begin{equation}
+    \begin{aligned}
+        S^{\text{init}}_t &\equiv \left\{ \left. \hat{\bm{s}}_{t_s^{(i)}}^{(i)}\right| i \in \mathcal{I}_t\right\}
+    \end{aligned}
+\end{equation}
+で表される．
+
+\par
+リアルタイム処理
 
 
 \section{AIシステムの課題点}
