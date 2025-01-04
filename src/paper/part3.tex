@@ -1,403 +1,182 @@
 \thispagestyle{fancy2}
 
+画像の時系列データを入力として，オンライン処理で複数の物体を追跡する問題は，複数物体追跡（Multi-Object Tracking; MOT）と呼ばれ，\cite{luo2021multiple}，防犯カメラに映る歩行者や自動車の追跡など，広く利用されている．しかしながらこれらの手法のほとんどは，一時刻に画像が一枚入力される３次元データにしか対応していない．特に，本問題設定のように３次元の空間情報が複数のスライス画像で与えられる４次元データにそのまま適用できる手法は未だ開発されていない．
+\par
+よってこの章では，新たに本問題設定のような問題に適用できるような手法を提案する．また提案手法の基盤として，一般的な複数物体追跡問題にしばしば利用されるYOLO+SORT\cite{redmon2016you,alif2024yolov1,bewley2016simple}を説明する．
+
 \section{既存手法と問題点}
-画像の時系列データを入力として，オンライン処理で複数の物体を追跡する問題は，複数物体追跡（Multi Object Tracking; MOT）と呼ばれ\cite{luo2021multiple}，防犯カメラに映る歩行者や自動車の追跡などに広く用いられている．しかしながらこれらの手法のほとんどが３次元（空間２次元+時間）データにしか対応していない．特に，本問題のようなスライスとして入力される４次元データをそのまま適用できる手法は未だ開発されていない．
+既存手法が対象にしている問題設定では，前述の通り一時刻の入力が画像一枚である．またYOLO+SORTでは，物体の情報をBounding-Boxと呼ばれる矩形情報$\left[x, y, w, h\right]$で表現する．ここで$(x,y)$は画像における物体の位置，$w$は物体の幅，$h$は物体の高さである．よって推定される物体の状態変数$\bm{s}_t$は，このBounding-Boxの持つ変数及びそれらの時間微分で与えられる．
 \par
-そのためこの章では，まずはじめにMOT問題にしばしば使用されるYOLO+SORT\cite{redmon2016you,alif2024yolov1,bewley2016simple}を既存手法として説明し，その後にそれらを基盤とした提案手法の説明に移る．
+以上の議論から，既存手法が対象にしている問題における，時刻$t$の入力データ$\mathcal{X}_t$は，
 
-\subsection{２次元画像の系列データに対する複数物体追跡}
-既存手法の説明の前に，それらの手法が解いている問題設定を先に述べる．
-\begin{description}
-    \item[処理] 時刻$t$で制御されるオンライン処理．ただし時間間隔$dt$は，カメラなどのフレームレートに依存する．
-    \item[入力] 各時刻$t$において，一枚の画像データが与えられる．ただしここでは簡単のため，常に同じ画角で得られた画像を仮定する．
-    \item[出力] 時刻$t$で追跡している各物体の状態ベクトル．ここで状態ベクトルとは，位置や速度，大きさなどの情報を含むベクトルのことである．
-\end{description}
-すなわち，前節で説明した問題設定において，画像データが複数のスライスではなく単一のスライスに変化しただけと考えれば良い．
-\par
-YOLO+SORTでは，前述の問題を物体検出とReIDという２つの処理に段階的に分けて解く．物体検出とは，ある画像を入力したときに，物体の存在する範囲をバウンディングボックスと呼ばれる矩形領域で検出し，なおかつ犬や猫，自動車といったクラス分類も同時に行うタスクのことをいう．また，画像内に複数の物体が存在していても，すべての各物体に対して同時に矩形領域検出・クラス分類を行う．YOLO（You Only Look Once）は，この物体検出用に開発された深層学習モデルである．またSORT（Simple Online Realtime Tracking）は，YOLOのような物体検出モデルから出力されたバウンディングボックスを入力とし，各個体の軌跡を推定する（図\ref{fig:yolosort}参照）．
-
-\begin{figure}[t]
-    \centering    
-    \includegraphics[width=.5\textwidth]{fig/nagoya-u.eps}
-    \caption{YOLO+SORTの処理}
-    \label{fig:yolosort}
-\end{figure}
-
-後述の提案手法では，YOLOの処理には変更を加えず，ReIDを４次元データ用に拡張してゆく．そのため，その基盤となるSORTの処理について，詳細を述べる．
-\par
-まず入力として，YOLOから出力される時刻$t=1,2,...,T$のバウンディングボックス群$O_t = \left\{\bm{o}_t^1, \bm{o}_t^2,...\right\}$が得られていると仮定する．ここで，各バウンディングボックス$\bm{o}_t^i$は，矩形領域を表す中心位置$(x,y)$と幅$w$，高さ$h$の４変数ベクトルである． SORTではこれらの入力に対して以下の処理（図\ref{fig:sort}参照）を時刻$1$から$T-1$まで繰り返し，各個体を表すIDで識別された状態変数配列$S_t = \left[\bm{s}_t^1, \bm{s}_t^2,...\right]$を返す．ここで$\bm{s}_t$は，位置や速度，大きさなどの情報を含んでいる．
-
-\begin{enumerate}
-    \item 各個体の状態変数$S_t$から，時刻$t+1$のバウンディングボックス配列の予測$\hat{O}_{t+1}$をカルマンフィルタ\cite{adachi2012kalman}の時間更新によって計算する．ただし$t=1$の場合は$\hat{O}_{t+1} \leftarrow O_t$とする．
-    \item 予測されたバウンディングボックス配列$\hat{O}_{t+1}$と与えられた$O_{t+1}$を比較し，いずれの組み合わせが同個体であるかを最適化する．
-    \item 各状態変数$\bm{s}_t^i$を，それに対応付けられたバウンディングボックス$\bm{o}_{t+1}^i$を用いて更新して$\bm{s}_{t+1}^i$とし，$S_{t+1}$に加える．
-\end{enumerate}
-
-\begin{figure}[t]
-    \centering    
-    \includegraphics[width=\textwidth]{fig/sort.pdf}
-    \caption{SORTのアルゴリズム概要}
-    \small
-    SORTでは予測，マッチング，更新を時刻$1$から$T-1$まで繰り返す．ただし予測と更新はカルマンフィルタによって行われる．ただしこの図では分かりやすさのために状態変数$\bm{s}_t$を用いずに観測系列$\bm{o}_1,...,\bm{o}_t$で図示している．実際には観測系列を記憶する必要はなく，前時刻の状態変数$\bm{s}_t$のみで予測計算を行う点に注意されたい．
-    \label{fig:sort}
-\end{figure}
-
-前述の既存手法，YOLO+SORTをそのまま本問題設定に適用することはできない．なぜならば，時刻$t$における入力は画像一枚ではなく，共焦点顕微鏡によって得られた複数の画像であるためだ．もちろん複数のスライスを個別に扱い，単一スライスごとにYOLO+SORTを適用することは可能である．しかしながら物体が鉛直方向に移動する場合には，いずれ対象物体がスライスの高さから外れ，追跡できなくなってしまう．またその場合には，各スライスで得られた各個体の軌跡を，事後的に統合するフレームワークが必要になり，問題が複雑になってしまう．
-\par
-そこで以下の節では，各時刻で他のスライスを考慮した追跡手法を提案する．
-
-\section{提案手法の概要}
-まず初めに，提案手法の設計思想を説明するために，従来の３次元（空間２次元＋時間）複数物体追跡と比較した本問題のような４次元（空間３次元＋時間）複数物体追跡のポイントを述べる．
-\begin{enumerate}
-    \item 鉛直方向に動く物体を追跡したい．本問題では３次元空間を複数の２次元画像で捉えているため，高さごとにスライスを独立して処理をすると，鉛直方向に動く物体を追従できない．
-    \item ３次元空間における状態変数を推定したい．従来の３次元複数物体追跡では，バウンディングボックスに含まれる変数$[x,y,w,h]$及びその速度が目的の状態変数であった．しかしながら，４次元複数物体追跡における目的の状態変数は，３次元的な位置や速度である．すなわち，SORTの内部で働くカルマンフィルタの再設計が必要である．
-\end{enumerate}
-
-以上の点を踏まえ，前述のYOLO+SORTの処理に加えて，他のスライスを参照する\textbf{Depth-SORT}と\textbf{SliceKalmanFilter}という処理・計算手法を提案する．提案手法の概要は以下の通りである（図\ref{fig:proposal}参照）．
-
-\begin{enumerate}
-    \item 物体検出: YOLOv10により，画像を入力してその画像内の物体をバウンディングボックス$[x,y,w,h]$で検出する．
-    \item ReID: SORTと新たに提案するDepth-SORTにより，検出されたバウンディングボックスにIDを付与する．
-    \item 状態推定: 新しく設計したカルマンフィルタ，SliceKalmanFilterにより，所望の状態変数$[x,\dot{x},y,\dot{y},z,\dot{z},r]$を推定する．
-\end{enumerate}
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\textwidth]{fig/proposal.pdf}
-    \caption{提案手法の概要}
-    \label{fig:proposal}
-\end{figure}
-
-以降の節では，各パートについて詳細を述べる．
-
-\section{物体検出: YOLOv10}
-YOLO（You Only Look Once）は，物体検出を行う深層学習モデルであり，2016年から2024年までに，version 10（以降versionはvで表記する）まで開発されている．図\ref{fig:yolo_base}に示すように，YOLOは（１）画像の内部表現を獲得するBackbone，（２）バウンディングボックスや信頼度スコアに変換するHead，そして（３）冗長な出力を抑えるNon-Maximum Suppression（以降NMSと呼ぶ）で構成される．このうちBackboneとHeadはニューラルネットワークである．これにより，YOLO以前の手法と比較して格段に処理速度が向上し，YOLOはリアルタイム物体検出手法として確立した．以降，v1からv9に至るまで精度と処理速度の向上が図られてきた．
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\textwidth]{fig/yolo_base.pdf}
-    \caption{YOLOの基本的なアーキテクチャ}
-    \small
-    各図の下部にある$\mathbb{R}^{X}$は，各ステップにおける入力及び出力のテンソルもしくは行列のshapeを表している．ただしここでは初期モデルv1の値を参考にしている．またhead出力後の$30$は，$7 \times 7$のgrid上に区別された領域ごとに，信頼性スコア+バウンディングボックス情報の次元数$5$のベクトルを2つ候補として出力し，さらに$20$クラス分類するための確率を出力するため，$(5 \times 2) + 20 = 30$となっている．ここでは，説明を簡易化するためにNeckを省略した．
-    \label{fig:yolo_base}
-\end{figure}
-
-しかしながら，唯一ニューラルネットワークを使用しないNon-Maximum Suppressionは，v9に至るまで処理速度を下げてしまう大きな要因であった．そこで2024年に発表されたv10\cite{wang2024yolov10}では，NMSを取り除き，dual-assignmentという機構を用いることでEnd-to-Endなニューラルネットワークとなっている．これにより図\ref{fig:yolov10_performance}に示すように，v10はv9の２倍ほどの高速化に成功している．
-
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\textwidth]{fig/yolov10_performance.pdf}
-    \caption{yoloのバージョン比較（（左）性能と推論速度（右）性能とモデルパラメータ数）}
-    \small
-    縦軸の\textrm{COCO AP}が性能，横軸の\textrm{Latency}は推論にかかる時間，\textrm{Number of Parameters}はモデルの大きさを表す．
-    \label{fig:yolov10_performance}
-\end{figure}
-
-前述のとおり本研究ではリアルタイム処理を行うため，少なくとも$n_s$枚の画像の物体検出を時間間隔$dt$以内に終わらせなければならない．そのため，本研究ではもっとも精度-推論時間のバランスが優れているYOLOv10を採用した．
-
-\subsection{YOLOv10のアーキテクチャ}
-%%% suspend
-%%% 全体のアーキテクチャ，backbone，neck, dual-assignment
-
-\subsection{YOLOv10の学習手順}
-YOLOv10の学習では，一般公開されているPre-Trainingされたモデルをダウンロードし，Fine-Tuningを行う．Pre-TrainingとFine-Tuningとは，大規模なデータセットでモデルを学習させた後（Pre-Training），その学習されたパラメータを初期値として小規模なデータセットでさらにモデルを微調整する（Fine-Tuning），学習方法の一つである\cite{radford2018improving}．特に，応用面での学習データセットが少ない場合や，汎化的なモデルを構築したいときに用いられる学習方法である．例えば物体検出であれば，すでに大規模なデータセットが溢れている画像分類で事前学習を行い，その後に小規模な物体検出用のデータセットで学習を行う．これにより，事前学習で画像の良い表現学習が行われるため，物体検出を学習させる際のデータセットは小規模で済む．Fine-Tuningでは図\ref{fig:PTandFT}のように，ニューラルネットワークの最終層のみを学習させるのが一般的である．
-
-\begin{figure}[t]
-    \centering    
-    \includegraphics[width=\textwidth]{fig/PTandFT.pdf}
-    \caption{Pre-TrainingとFine-Tuning}
-    \label{fig:PTandFT}
-\end{figure}
-
-\section{ReID: SORT+DepthSORT}
-既存手法のSORTでは，時刻$t$において時刻$t+1$の画像から検出されたバウンディングボックスのうち，いずれが時刻$t$まで追跡してきた物体と同物体であるのか，もしくは新しく増えた物体なのかを割り当てていた．またそのためにカルマンフィルタで予測を行っていた．
-\par
-本問題設定でも同様に，新しく時刻$t+1$の複数画像から検出されたバウンディングボックスのうち，いずれが時刻$t$まで追跡してきた物体と同物体であるかを計算し，IDを割り当てる．ただし本問題設定では一つのバウンディングボックスに決まらず，複数のスライスに同物体が検出されることに注意されたい．
-
-\subsection{Depth-SORT}
-
-ある時刻$t$において，同物体由来の複数のバウンディングボックスに同じIDを割り当てるために，Depth-SORTという処理を提案する．Depth-SORTでは，従来のSORTが時間$t$方向に物体の追跡を行っていたのに対し，深さ$z$方向に物体の追跡を行う．ある時刻において複数のスライスが得られたときに，近い位置で検出されたバウンディングボックスは，同物体由来である確率が非常に高い．なぜならば，深さ方向への時間変位は時間方向のものよりも短いためである．これによって，時刻$t$のバウンディングボックスを個体ごとに仕分けることができる．
-\par
-以上の議論の定式化を行う．まず時刻$t$において，$n_s$枚のスライスを物体検出器YOLOv10に入力し得られたバウンディングボックス群$\mathcal{O}_t$を
 \begin{equation}
+    \mathcal{X}_t \in \mathbb{R}^{W \times H \times 3}
+\end{equation}
+で表せられ，物体の状態変数$\bm{s}_t$は，
+
+\begin{equation}
+    \bm{s}_t \equiv \left[x_t, \dot{x}_t, y, \dot{y}_t, w, h\right]
+\end{equation}
+で表せられる．もちろん位置$(x,y)$の二階時間微分やサイズ$w,h$の一階時間微分を加えることも可能であるが，本論文では議論しない．
+\par
+以降の既存手法の説明では，出力される変数は第二章と同様に式\ref{eq:output1}--\ref{eq:output2}であるとする．便宜のために各式を再掲する．
+
+\begin{equation}
+    \label{eq:output1on3}
     \begin{aligned}
-        \mathcal{O}_t &= \left\{O_{t, 1}, O_{t,2},...,O_{t,n_s}\right\}
-        \\ O_{t,z} &= \left\{\bm{o}_{t,z}^1, \bm{o}_{t,z}^2,...\right\}
+        S^{\text{pred}}_t &\equiv \left\{ \left. \hat{\bm{s}}_t^{(i)}\right| i \in \mathcal{I}_t\right\}
     \end{aligned}
 \end{equation}
-と表す．Depth-SORTは$\mathcal{O}_t$を入力としてアルゴリズム\ref{alg:Depth-SORT}を実行する．
+\begin{equation}
+    \label{eq:output2on3}
+    \begin{aligned}
+        S^{\text{init}}_t &\equiv \left\{ \left. \hat{\bm{s}}_{t_s^{(i)}}^{(i)}\right| i \in \mathcal{I}_t\right\}
+    \end{aligned}
+\end{equation}
+ここで$\hat{A}$は$A$の推定値，$\mathcal{I}_t$は時刻$t$において追跡している物体の集合，$t_s^{(i)}$は物体$i$が追跡され始めた時刻を表している．
 
-\begin{algorithm}[t]
-    \caption{Depth-SORT}
-    \label{alg:Depth-SORT}
-    \begin{algorithmic}[1]
-        \REQUIRE $O_{t,1}, O_{t,2}, ..., O_{t,n_s}$
-        \ENSURE $B$ \text{\# IDをkeyとしたバウンディングボックス集合}
-        \STATE \textbf{Initialize}: $B = \emptyset,\ T = \emptyset$
-        \FOR {$\bm{o} \in O_{t,1}$}
-            \STATE $T \leftarrow T \cup kalman\_initialize(\bm{o})$ \text{\# 各物体に対してカルマンフィルタの初期化}
-        \ENDFOR
-        \FOR {$z = 1$ to $n_s - 1$}
-            \STATE $P = \emptyset$ \text{\# 予測位置集合の初期化}
-            \FOR {$t \in T$}
-                \STATE $P \leftarrow P \cup kalman\_predict(t)$ \text{\# 各物体に対してカルマンフィルタの時間更新}
-            \ENDFOR
-            \STATE $pair\_idx \leftarrow hungarian\_matching(P, O_{t,z+1})$ \text{\# 予測と検出のマッチング}
-
-            \FOR {$i_t, i_o \in pear\_idx$}
-            \IF {$i_t == \textrm{None}$}
-                \STATE $T \leftarrow T \cup kalman\_initialize(O_{t,z+1}[i_o])$ \text{\# 新しい物体の追跡を開始}
-            \ELSIF {$o_t == \textrm{None}$}
-                \STATE $T \leftarrow T\ /\ T[i_t]$ \text{\# 途切れたら追跡を終える}
-            \ELSE 
-                \STATE $T[i_t] \leftarrow kalman\_update(O_{t,z}[i_o])$ \text{\# カルマンフィルタの観測更新}
-            \ENDIF
-    \ENDFOR
-        \ENDFOR
-        \RETURN $track\_to\_bboxes(T)$
-    \end{algorithmic}
-\end{algorithm}
-
-ここで出力されたバウンディングボックス集合$B$は，IDを割り当てられた時刻$t$のバウンディングボックス群をIDで振り分けたものである．
-
-\subsection{SORTとDepth-SORTの統合}
-ここでは，従来の時間方向の対応付け（SORT）と空間方向の対応付け（Depth-SORT）の時刻$t$における統合処理について述べる．従来のSORTのみでは，単一スライスの時系列データしか扱えないため，追跡していた物体がそのスライス画像に映らなくなったときに，追跡が途切れてしまう．そこで，時刻$t$におけるスライスごとの時間方向のマッチングの後，Depth-SORTを行い，追跡してきたIDとDepth-SORTから出力されたID間のマッチングを図る．
+既存手法YOLO+SORTは，物体検出手法とReID手法を組み合わせた手法である（図\ref{fig:YOLO+SORT}参照）．物体検出とは，画像内に映る物体を前述したBounding-Boxで位置検出し，さらにその物体が何であるかを同定するタスクである．``何であるか''は機械学習の分野では``クラス"と呼び，事前に犬や猫といったクラスの候補を与えておくことで，各物体がいずれのクラスに属するかを判定する．また物体検出は，画像内に複数の物体が写っている場合にもそれぞれをクラス分類できることが強みである．一方ReIDとは，検出された各Bounding-BoxにIDを振るタスクである．例えば２枚の画像内に同一個体が写っている場合には，同じIDを振ることが望まれる．これを画像時系列データに適用すれば，追跡をしていることと同義となる．
+\par
+以降の節で，各手法について詳細に述べる．
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\textwidth]{fig/sort+depthsort.pdf}
-    \caption{SORT+Depth-SORTの概略図}
-    \label{fig:sort+depthsort}
+    \includegraphics[width=\textwidth]{fig/yolosort.pdf}
+    \caption{YOLO+SORTの処理概要}
+    \label{fig:YOLO+SORT}
 \end{figure}
 
-具体的な処理をアルゴリズム\ref{alg:sort+depthsort}に載せる．
+    \subsection{YOLOによる物体検出}
+    YOLO（You Only Look Once）は，2016年に提案された物体検出を行う深層学習モデルである．この手法が開発される以前では，矩形領域抽出とクラス分類の処理は段階的に行われていた\cite{girshick2014rich,girshick2015fast,ren2016faster}ために処理時間に問題があったが，YOLOではそれらをすべてニューラルネットワークで処理するモデルとして提案され，その高速性から以降リアルタイム物体検出の手法として確立した．
+    またリアルタイムな処理を必要とされる物体追跡にも，デファクトスタンダードとして使用される．
+    \par
+    YOLOの性能についてしばしば言及されるのは，推論時間と精度のトレードオフである．ここでの推論とは，一般的な機械学習モデルを学習させた後に目的のデータを入力して結果を得る操作のことをいう．一般的に，モデルの学習パラメータ数を増やすほど精度が上がる一方，推論時間は大きくなってしまい，逆もまた然りである．初期モデルのversion1（以降v1と表記する）以降，このトレードオフの改善を目指して，2024年12月時点でYOLOはv2からv10まで開発されている．図\ref{fig:v10_performance}に示すようにv10が現状では最も優れているため，以降ではv10を前提として説明を進める．
 
-\begin{algorithm}[t]
-    \caption{SORT + Depth-SORT}
-    \label{alg:sort+depthsort}
-    \begin{algorithmic}[1]
-        \REQUIRE $S_t, O_t = \left\{ O_{t,1}, O_{t,2}, ..., O_{t,n_s} \right\}$
-        \ENSURE $B$ \text{\# ID, 時刻$t$, スライス$s$をkeyとしたバウンディングボックス集合}
-        \STATE \textbf{Initialize}: $B = \emptyset$
-        \FOR {$z = 1$ to $n_s - 1$}
-            \STATE $B_z^{time} \leftarrow sort(S_t[z], O_{t,z})$ \text{\# time-directional matching}
-        \ENDFOR
-        \STATE $B^{time} \leftarrow \left\{ \left. B_z^{time} \right| z = 1,2,...,n_s \right\}$
-        \STATE $B^{depth} \leftarrow depth\_sort(O_t)$ \text{\# depth-directional matching}
-        \STATE $C_{id} \leftarrow calc\_bt\_in\_bd(B^{time}, B^{depth})$
-        \FOR {$(i_t, i_d)$ in $hungarian\_matching(C_{id})$}
-            \IF {$i_d \text{ is not None}$}
-                \STATE $B_{i_t} \leftarrow convert(B^{depth}_{i_d})$
-            \ELSE
-                \STATE $B_{i_t} \leftarrow \textrm{None}$
-            \ENDIF
-        \ENDFOR
-        \RETURN $B$
-    \end{algorithmic}
-\end{algorithm}
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{fig/yolov10_performance.pdf}
+        \caption{yoloのバージョン比較（（左）性能と推論速度（右）性能とモデルパラメータ数）}
+        \small
+        縦軸の\textrm{COCO AP}が性能，横軸の\textrm{Latency}は推論にかかる時間，\textrm{Number of Parameters}はモデルの大きさを表す．
+        \label{fig:v10_performance}
+    \end{figure}
 
-ここで入力の$S_t$は，\ref{eq:states}のようになっている．$\bm{s}^{(i)}_{t,z}$は，3.1節におけるバウンディングボックスの状態変数と同様である．
+    YOLOv10は，画像の埋め込み表現$z$を獲得する写像$f(\cdot ; \theta)$（式\ref{eq:f}）とそこから物体検出用の矩形領域抽出とクラス分類に対応する出力$y$を獲得する写像$g(\cdot ; \phi)$（式\ref{eq:g}）で構成される．
 
-\begin{equation}
-    \label{eq:states}
-    \begin{aligned}
-        S_t &= \left\{ \left. S_t^{(i)} \right| \text{$i$は各物体のID} \right\}
-        \\ S_t^{(i)} &= \left\{ \left. \bm{s}_{t,z}^{(i)} \right| z = 1,2,...,n_s \right\}
-    \end{aligned}
-\end{equation}
-
-また，$B^{time}$と$B^{depth}$にはそれぞれ，SORTとDepth-SORTによって得られたID付きのバウンディングボックスの集合が与えられている．ここで，２つの集合のIDマッチングを行う．マッチングのコスト行列$C_{id}$の各要素$c_{ij}$は，式\ref{eq:id_cost}で与えられる．すなわち，$B^{time}_i$のバウンディングボックスが$B^{depth}_j$に多く含まれるほど，$i$と$j$は同個体と考えられ，対応付けられやすくなる．
-
-\begin{equation}
-    \label{eq:id_cost}
-    \begin{aligned}
-        &c_{ij} = - \sum_k \mathbbm{1}_{B_j^{depth}}\left[ B_{ik}^{time} \right]
-        \\&\mathbbm{1}_{A}[x] = \left\{
+    \begin{equation}
+        \label{eq:f}
         \begin{gathered}
-            1 \quad (x \in A)
-            \\0 \quad (x \notin A)
+            z = f(X; \theta)
+            \\ z \in \mathbb{R}^d, \quad X \in \mathbb{R}^{W \times H \times 3}
         \end{gathered}
-        \right.
-    \end{aligned}
-\end{equation}
+    \end{equation}
+    \begin{equation}
+        \label{eq:g}
+        \begin{gathered}
+            y = g(z; \phi)
+            \\ y \in \mathbb{R}^{n \times \left(n_c + 5\right)}
+        \end{gathered}
+    \end{equation}
+    ここで$d$は埋め込み表現の次元数，$W$と$H$は入力画像のピクセル幅と高さ，$n$は出力されるBounding-Boxの個数，$n_c$はクラス分類において事前に準備するクラス数である．また$\theta, \phi$は学習パラメータであり，学習ステップで最適化される．
+    \par
+    式\ref{eq:g}における$n_c + 5$は，Boundng-Boxの$\left[x, y, w, h\right]$に加え，$[0,1]$のConfidence-Scoreと条件付きクラス確率を表している．このConfidence-Scoreとは物体らしさを表し，各クラスに属する確率は，この物体らしさと条件付きクラス確率の積で与えられる．例えばクラスの候補に犬と猫の二つを準備し（$n_c=2$），Confidence-Scoreが$0.8$，条件付きクラス確率がそれぞれ$0.8, 0.2$となった場合は，犬である確率が$0.64$，猫である確率が$0.16$となり，その物体が犬である可能性が高い，という解釈ができる．
+    \par
+    またYOLOv10では，Confidence-Scoreの閾値処理を行う．すなわち，閾値$\sigma_{conf}$を定め，前述のクラス確率の最大値が$\sigma_{conf}$以下であるものを出力しない．この処理により，本来は物体ではないのに物体であると判断したもの（偽陽性という）が出力される可能性を抑えることができる．ただし閾値を大きくした場合には，本来は物体であるのに検出をしない（偽陰性という）可能性が大きくなってしまうことに注意しなければならない．
+    \par
+    最後にYOLOv10の学習方法について述べる．一般的に学習パラメータ数の大きいニューラルネットワークや学習データが高価である場合には，図\ref{fig:PTandFT}のようにPre-TrainingとFine-Tuningという２つのステップに分けて学習が行われる．大規模なデータセットでモデルを学習させた後（Pre-Training），その学習されたパラメターを初期値として小規模なデータセットでさらに学習パラメータを調整させる（Fine-Tuning）\cite{radford2018improving}．例えば物体検出用のモデルを構築する際に，データが安価に手に入る画像分類でPre-Trainingさせた後，物体検出用のデータセットでFine-Tuningを行う．これにより，画像の処理に適した状態から物体検出用に特化させることができ，学習の安定や高精度を図れる．また物体検出用のデータセットを大量に準備する必要もなくなる．また他にも，Pre-Trainingの際に$100$クラス分類の物体検出で学習させ，Fine-Tuningで特殊な対象$1$クラス分類の物体検出を学習させることもある．Fine-Tuningでは，埋め込み表現を得る$f(\cdot ; \theta)$の部分のみを引き継ぎ，$g(\cdot; \phi)$の部分は目的のタスク用に新しく学習し直すのが一般的である．
 
-また出力の$B$は同様にIDをkeyとしたバウンディングボックスの集合で与えられる．ただし$convert$関数により，式\ref{eq:convert}のように変形している．
+    \begin{figure}[t]
+        \centering    
+        \includegraphics[width=\textwidth]{fig/PTandFT.pdf}
+        \caption{Pre-TrainingとFine-Tuning}
+        \label{fig:PTandFT}
+    \end{figure}
+    
+    \subsection{SORTによるReID}
+    SORT（Simple Online Realtime Tracking）は，YOLOなどの物体検出によって得られたBonding-Boxの時系列データを入力とし，これらBounding-BoxにIDを振りながら各個体の軌跡を推定する，最も基礎的な手法である．このアルゴリズムは時系列データを処理するKalman Filterと時刻間の対応付けを行うHungarian Algorithmで構成される．まずはこれらの詳細を説明する．
 
-\begin{equation}
-    \label{eq:convert}
-    \begin{aligned}
-        B &= \left\{ \left. B_i \right| \text{IDが$i$の個体の出力}\right\}
-        \\ B_i &= \left\{ \left. \bm{b}_s^{(i)} \right| \bm{b}_s = \left[x_s, y_s, w_s, h_s\right]\right\}
-    \end{aligned}
-\end{equation}
+        \subsubsection{Kalman Filter}
+        Kalman Filterとは，センサーなどから得られた時系列データからシステム内部の状態を推定するための最適化アルゴリズムである．ここでは時系列データである観測変数を$\bm{y}_1, \bm{y}_2, \dots, \bm{y}_t$，システム内部の状態変数を$\bm{x}_1, \bm{x}_2, \dots, \bm{x}_t$と表記する．Kalman Filterでは状態変数$\bm{x}_t$を推定するために，その確率分布を考える．すなわち，観測系列$\bm{y}_1, \bm{y}_2, \dots, \bm{y}_t$が得られたときの状態変数$\bm{x}_t$の事後分布$p(\bm{x}_t \left| \bm{y}_1, \bm{y}_2, \dots, \bm{y}_t \right.)$を計算する．
+        \par
+        ベイズの定理から，所望の事後確率は
+        \begin{equation}
+            \label{eq:filtering1}
+            p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) = \frac{p(\left. \bm{y}_t \right| \bm{y}_1,..., \bm{y}_{t-1}, \bm{x}_t) p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}{p(\left.\bm{y}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}
+        \end{equation}
+        と変形できる．また右辺の分子後半部$p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})$は条件付き確率の性質から，
+        \begin{equation}
+            \label{eq:prediction1}
+            \begin{aligned}
+                p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) &= \int p(\left.\bm{x}_t, \bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
+                \\ &= \int p(\left.\bm{x}_t\right|\bm{x}_{t-1}, \bm{y}_1,..., \bm{y}_{t-1}) p(\left.\bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
+            \end{aligned}        
+        \end{equation}
+        と変形できる．
+        \par
+        式\ref{eq:filtering1},\ref{eq:prediction1}から，$p(\bm{x}_0\left|\bm{y}_0\right.) = p(\bm{x}_0)$が与えられれば全ての時刻$t=1,2,\dots,t$における$p(\bm{x}_t\left|\bm{y}_1,\dots,\bm{y}_t\right.)$が理論上は計算できる．しかしながら式\ref{eq:filtering1}における右辺の分母や式\ref{eq:prediction1}における右辺には積分が含まれるため，現実には計算できない．そのためKalman Filterでは一般的に，式\ref{eq:linear_setting}に見られる線形性及びマルコフ性をシステムに仮定している（この問題設定におけるKalman Filterを特別に一般線形Kalman Filterと呼ぶこともある）．
+        \begin{equation}
+            \label{eq:linear_setting}
+            \begin{aligned}
+                \bm{x}_{t+1} &= F_t \bm{x}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
+                \\ \bm{y}_t &= H_t \bm{x}_t + G_t \bm{u}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
+            \end{aligned}        
+        \end{equation}
+        上の式は状態遷移式，下の式は観測方程式と呼ばれる．ここで$F_t$は遷移行列と呼ばれる状態変数の時間遷移を，$H_t$は観測行列と呼ばれる観測変数との対応を表す行列である．また$\bm{v}_t$はシステムノイズ，$\bm{w}_t$は観測ノイズと呼ばれ，正規性を持ったホワイトノイズである．また$\bm{u}_t$はこちら側が制御する入力変数であり，ここでは後述の問題に対応するために観測方程式に加えている．$G_t$はその入力変数が観測変数に与える影響を表す行列である．
+        \par
+        式\ref{eq:linear_setting}より，明らかに状態変数$\bm{x}_t$と観測変数$\bm{y}_t$はマルコフ性を持っているため，式\ref{eq:filtering1}及び式\ref{eq:prediction1}は，
+        \begin{equation}
+            \label{eq:filtering2}
+            \begin{aligned}
+                p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) &= \frac{p(\left. \bm{y}_t \right| \bm{x}_t) p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}{p(\left.\bm{y}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}
+            \end{aligned}
+        \end{equation}
+        \begin{equation}
+            \label{eq:prediction2}
+            \begin{aligned}
+                p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) = \int p(\left.\bm{x}_t\right|\bm{x}_{t-1}) p(\left.\bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
+            \end{aligned}
+        \end{equation}
+        と書き換えられる．
+        \par
+        また式\ref{eq:linear_setting}より，$\bm{x}_t$及び$\bm{y}_t$は$\bm{x}_{t-1}$が正規分布に従えば，線形な式であるためにこれらもまた正規分布に従うことが分かる．すなわち$p(\bm{x}_0)$に正規分布を仮定すれば，全ての$t$で状態変数$\bm{x}_t$と観測変数$\bm{y}_t$は正規分布に従う．よって，式\ref{eq:filtering2}と式\ref{eq:prediction2}は式\ref{eq:normal_format}のように表すことができ，
+        \begin{equation}
+            \label{eq:normal_format}
+            \begin{aligned}
+                p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) &= \mathcal{N}(\bm{\mu}_{t|t}, \Sigma_{t|t})
+                \\ p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) &= \mathcal{N}(\bm{\mu}_{t|t-1}, \Sigma_{t|t-1})
+            \end{aligned}
+        \end{equation}
+        以下のように状態遷移式及び観測方程式上の行列で表現でき，計算可能となる．
+        \begin{equation}
+            \begin{aligned}
+                \bm{\mu}_{t|t-1} &= F_{t-1} \bm{\mu}_{t-1|t-1}
+                \\\Sigma_{t|t-1} &= F_{t-1} \Sigma_{t-1|t-1} F_{t-1}^{\top} + Q_{t-1}
+                \\\bm{\mu}_{t|t} &= \Sigma_{t|t} \left( H_t R_t^{-1} \bm{y}_t + \Sigma_{t|t-1}^{-1} \bm{\mu}_{t|t-1} \right)
+                \\\Sigma_{t|t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t|t-1}^{-1}\right)^{-1}
+            \end{aligned}                    
+        \end{equation}
 
-\section{状態変数の推定: SliceKalmanFilter}
-最後に，バウンディングボックス群$B_i$から状態変数$\left[x,\dot{x}, y, \dot{y}, z, \dot{z}, r\right]$を推定するカルマンフィルタの設計を行う．そのまえに，一般的な線形カルマンフィルタの説明を述べる．
+        またKalman Filterでは，事後確率が最大な点を推定値とする．すなわち観測系列$\bm{y}_1,\bm{y}_2,\dots,\bm{y}_t$が得られたときの最適状態変数推定値$\hat{\bm{x}}_{t|t}$は，
+        \begin{equation}
+            \begin{aligned}
+                \hat{\bm{x}}_{t|t} &= \underset{\bm{x}_t \in \mathbb{R}^{n}}{\text{argmax}}\ p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t )
+                \\ &= \bm{\mu}_{t|t}
+            \end{aligned}
+        \end{equation}
+        で与えられる．ここで$n$は状態変数の次元数である．
 
-\subsection{一般線形カルマンフィルタ}
+        \subsubsection{Hungarian Algorithm}
+        後回し！！！
 
-一般線形カルマンフィルタは，観測系列$\bm{y}_1,..., \bm{y}_t$が得られたときに，状態変数$\bm{x}_t$の良い推定値$\hat{\bm{x}}_t$を得ることを目的とする最適化手法である．ここで観測変数$\bm{y}_t$はセンサーなどで得られるデータであり，状態変数$\bm{x}_t$はシステム内部で働く，推定したい変数である．またこちら側が制御できる変数$\bm{u}_t$をシステムへ入力することもある．ここでは後述の問題に対応するために，システム入力$\bm{u}_t$が，観測$\bm{y}_t$に変換$G_t$を通して影響を及ぼすと仮定する．一般線形カルマンフィルタでは，これらの変数は線形な式\ref{eq:kf_setting}に従うと仮定する．
+    \subsection{既存手法適用における問題点}
+    
 
-\begin{equation}
-    \label{eq:kf_setting}
-    \begin{aligned}
-        \bm{x}_{t+1} &= F_t \bm{x}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
-        \\ \bm{y}_t &= H_t \bm{x}_t + G_t \bm{u}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
-    \end{aligned}
-\end{equation}
+\section{提案手法の設計思想}
 
-カルマンフィルタでは，$\bm{x}_t$を確率変数とみなし，その確率が最大になるように推定を行う．そのため，観測系列$\bm{y}_1, ..., \bm{y}_j$が得られたときの確率変数$\bm{x}_k$の推定値$\bm{x}_{k|j}$は，式\ref{eq:kalman_map}で与えられる．
+\section{SliceKalmanFilterの設計}
 
-\begin{equation}
-    \label{eq:kalman_map}
-    \bm{x}_{k|j} = \underset{\bm{x}_k \in \mathbb{R}^{n}}{\textrm{argmax}}\ p(\left. \bm{x}_k \right| \bm{y}_1,..., \bm{y}_j )
-\end{equation}
+\section{スライス３次元画像におけるReID}
 
-ここからは，事後確率$p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t )$の変形を考える．ベイズの定理から，
+    \subsection{SliceKalmanFilter予測によるマッチング}
 
-\begin{equation}
-    \begin{aligned}
-        p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) &= \frac{p(\left. \bm{y}_t \right| \bm{y}_1,..., \bm{y}_{t-1}, \bm{x}_t) p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}{p(\left.\bm{y}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}
-    \end{aligned}
-\end{equation}
-
-と表せられる．さらに式\ref{eq:kf_setting}より，$\bm{y}_t$にはマルコフ性が成立するから，
-
-\begin{equation}
-    \label{eq:filtering}
-    \begin{aligned}
-        p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) &= \frac{p(\left. \bm{y}_t \right| \bm{x}_t) p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}{p(\left.\bm{y}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}
-    \end{aligned}
-\end{equation}
-
-と変形できる．
-\par 
-次に，右辺の分子後半部$p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})$について考える．確率分布の性質から，
-
-\begin{equation}
-    \begin{aligned}
-        p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) &= \int p(\left.\bm{x}_t, \bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
-        \\ &= \int p(\left.\bm{x}_t\right|\bm{x}_{t-1}, \bm{y}_1,..., \bm{y}_{t-1}) p(\left.\bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
-    \end{aligned}
-\end{equation}
-
-と変形できる．また先程と同様に，$\bm{x}_t$のマルコフ性から，
-
-\begin{equation}
-    \label{eq:updating}
-    \begin{aligned}
-        p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) = \int p(\left.\bm{x}_t\right|\bm{x}_{t-1}) p(\left.\bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
-    \end{aligned}
-\end{equation}
-
-式\ref{eq:filtering}と\ref{eq:updating}から，初期値$p(\bm{x}_0 | \bm{y}_0) = p(\bm{x}_0)$があれば，すべての時刻$1,...,t$における$p(\bm{x_t} | \bm{y}_1,..., \bm{y}_t)$及び$p(\bm{x}_t | \bm{y}_1,..., \bm{y}_{t-1})$が理論的には計算できる．しかしながら，式\ref{eq:filtering}の分母や式\ref{eq:updating}には積分計算が必要なため，現実的には計算できない．そのため，線形カルマンフィルタでは式\ref{eq:kf_setting}に見られる線形性を仮定している．
-\par
-式\ref{eq:kf_setting}より，
-
-\begin{equation}
-    \begin{aligned}
-        p(\left.\bm{x}_t\right|\bm{x}_{t-1}) &= \mathcal{N}(F_{t-1} \bm{x}_{t-1}, Q_{t-1})
-        \\ p(\left. \bm{y}_t \right| \bm{x}_t) &= \mathcal{N}(H_t \bm{x}_t + G_{t} \bm{u}_{t}, R_t)
-    \end{aligned}
-\end{equation}
-
-である．よって，初期値$\bm{x}_0$が正規分布に従うのであれば，２つの事後確率分布$p(\bm{x_t} | \bm{y}_1,..., \bm{y}_t)$及び$p(\bm{x}_t | \bm{y}_1,..., \bm{y}_{t-1})$も正規分布に従う．ここで便宜上のため$p(\bm{x_k} | \bm{y}_1,..., \bm{y}_j) = \mathcal{N}(\bm{\mu}_{k|j}, \Sigma_{k|j})$と表すと，
-
-\begin{equation}
-    \label{eq:mu_sigma}
-    \begin{aligned}
-        \bm{\mu}_{t|t-1} &= F_{t-1} \bm{\mu}_{t-1|t-1}
-        \\\Sigma_{t|t-1} &= F_{t-1} \Sigma_{t-1|t-1} F_{t-1}^{\top} + Q_{t-1}
-        \\\bm{\mu}_{t|t} &= \Sigma_{t|t} \left( H_t R_t^{-1} \bm{y}_t + \Sigma_{t|t-1}^{-1} \bm{\mu}_{t|t-1} \right)
-        \\\Sigma_{t|t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t|t-1}^{-1}\right)^{-1}
-    \end{aligned}
-\end{equation}
-
-と計算で求めることができる．
-\par
-
-一般線形カルマンフィルタでは，状態変数$\bm{x}_t$の事後確率はすべて正規分布で表せることができた．推定値は，この事後確率を最大化することによって与えられる．すなわち，各時刻$t$における推定値$\hat{\bm{x}}_{t|t-1}$及び$\hat{\bm{x}}_{t|t}$はそのまま正規分布の平均値で与えられる．以上より，一般線形カルマンフィルタの最適解は式\ref{eq:kf_optimal}である．
-
-\begin{equation}
-    \label{eq:kf_optimal}
-    \begin{aligned}
-        \hat{\bm{x}}_{t|t-1} &= \bm{\mu}_{t|t-1}
-        \\ \hat{\bm{x}}_{t|t} &= \bm{\mu}_{t|t}
-    \end{aligned}
-\end{equation}
-
-また式\ref{eq:mu_sigma}において，右辺に出てくる$\bm{\mu}$には一時刻前などの推定値$\hat{\bm{x}}$が代入される．これにより，逐次的に式\ref{eq:filtering}と\ref{eq:updating}を行うことで推定値を計算することができる．
-
-\subsection{拡張カルマンフィルタ}
-
-式\ref{eq:kf_setting}で仮定した通り，一般線形カルマンフィルタは線形なシステムの推定にしか適していない．非線形なシステムに対しても，良い精度で推定を行えるように改良されたカルマンフィルタの一つが拡張カルマンフィルタである．ここでは後述の問題に対応するため，観測写像のみが非線形な場合を考える．
-\par
-観測写像を$h(\bm{x})$と定義すると，観測方程式は式\ref{eq:nonlinear_observation}で表せられる．
-
-\begin{equation}
-    \label{eq:nonlinear_observation}
-    \bm{y}_t = h(\bm{x}_t) + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
-\end{equation}
-
-ここで$h(\bm{x}_t)$の近似を考える．ある状態推定値$\hat{\bm{x}_t}$の周りでTaylor展開を行うと，
-
-\begin{equation}
-    \begin{aligned}
-        h(\bm{x}_t) &\simeq h(\hat{\bm{x}_t}) + \left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}} \left( \bm{x}_t - \hat{\bm{x}_t} \right) + \mathcal{O}(\bm{x}_t^2)
-        \\ &= \left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}} \bm{x}_t + h(\hat{\bm{x}_t}) - \left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}} \hat{\bm{x}_t} + \mathcal{O}(\bm{x}_t^2)
-    \end{aligned}
-\end{equation}
-
-と変形できる．ここで$H_t \equiv \left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}}$とおき，右辺の第二項以降を$G_t\bm{u}_t$とおくと，これは式\ref{eq:kf_setting}の観測方程式と一致する．
-\par
-以上の議論より，一般線形カルマンフィルタにおける$H_t \bm{x}_t + G_t \bm{u}_t$の部分を$h(\bm{x}_t)$，$H_t$のみの部分を$\left.\frac{\partial h}{\partial \bm{x}_t} \right|_{\bm{x}_t=\hat{\bm{x}_t}}$とおけば，一般線形カルマンフィルタの枠組みで計算可能である．すなわち，観測写像$h(\bm{x})$が明示的に与えられており，なおかつ一階微分可能であれば，非線形なシステムに拡張カルマンフィルタを用いることができる．
-
-\subsection{SliceKalmanFilterの設計}
-
-提案するSliceKalmanFitlerの状態変数$\bm{x}_t$は，第二章で述べたとおり，式\ref{eq:SKFstate}で表せられる．ここで$(x,y,z)$は球体の中心座標，$(\dot{x}, \dot{y}, \dot{z})$はその速度，$r$は半径を表す．
-
-\begin{equation}
-    \label{eq:SKFstate}
-    \bm{x}_t = \left[x, \dot{x}, y, \dot{y}, z, \dot{z}, r\right]
-\end{equation}
-
-一方観測変数$\bm{y}_t$は，前述のSORT+Depth-SORTが出力する，IDごとのバウンディングボックス集合（式\ref{eq:SKFinput}参照）を平坦化したベクトルである．
-
-\begin{equation}
-    \label{eq:SKFinput}
-    \begin{aligned}
-        \bm{y}_t &= \textrm{Flatten}(\left\{ \left. \bm{o}_z \right| z \in \mathcal{S}_t \right\})
-        \\\bm{o}_z &= \left[x_z, y_z, w_z, h_z\right]
-    \end{aligned}
-\end{equation}
-
-ただしここでは，スライスのインデックス集合$\mathcal{S}_t$が，$\mathcal{S}_t \subseteq  \left\{1,2,...,n_s\right\}$であることに注意されたい．なぜならば，ある個体が常にすべてのスライスにおいて検出されるわけではないためである．すなわち観測変数$\bm{y}_t$の長さは，個体や時刻によって変化しうる．よって，観測写像$h_t(\cdot)$もそれに応じて変化する．
-\par
-まずは，ある単一のスライス$s$における観測写像$h_s(\bm{x}_t)$を考える．2.1及び式\ref{eq:slice-time}で述べたように，スライスには有限の取得時間がかかるため，スライス$s$が取得される時刻は$t+\tau(s)$である．さらにその際に検出されるバウンディングボックスの幅$w$と$h$はスライスの高さと球体の中心距離に依存して変化する．これを考慮すると，
-
-\begin{equation}
-    \label{eq:slice_observation_map}
-    \begin{aligned}
-        h_s(\bm{x}_t) &= \left[x_s, y_s, w_s, h_s\right]
-        \\ x_s &= x + \dot{x} \tau(s)
-        \\ y_s &= y + \dot{y} \tau(s)
-        \\ z_s &= z + \dot{z} \tau(s)
-        \\ w_s &= h_s = 2 \sqrt{r^2 - (z_s - z(s))^2}
-    \end{aligned}
-\end{equation}
-
-ここで$z(s)$は，単一スライス$s$の焦点が合っている物理的な高さを表す．式\ref{eq:slice_observation_map}からも分かる通り，この計算は$\left|r^2 - (z_s - z(s))^2\right| > 0$のときのみ行われる．また，明らかに観測変数と$h(\bm{x}_t)$及び$H_t \bm{x}_t$の次元数は一致していなければならないため，結局全体の観測写像$h(\bm{x}_t)$は式\ref{eq:whole_obs_map}で表せられる．
-
-\begin{equation}
-    \label{eq:whole_obs_map}
-    h(\bm{x}_t) = \text{Flatten}(\left\{ \left. h_s(\bm{x_t}) \right| s \in \mathcal{S}_t \land \left|r^2 - (z_s - z(s))^2\right| > 0 \right\})
-\end{equation}
-
-また同様の議論から，観測変数$\bm{y}_t$にも修正を加え，式\ref{eq:modify_obs}で表す．
-
-\begin{equation}
-    \label{eq:modify_obs}
-    \bm{y}_t = \text{Flatten}(\left\{ \left. \bm{o}_z \right| z \in \mathcal{S}_t \land  \left|r^2 - (z_s - z(s))^2\right| > 0 \right\})
-\end{equation}
-
-観測行列$H_t$については，式\ref{eq:whole_obs_map}を状態変数$\bm{x}_t = \left[x,\dot{x},y,\dot{y},z, \dot{z},r\right]$の各成分ごとに微分し，推定値$\hat{\bm{x}}_{t|t-1}$及び$\hat{\bm{x}}_{t|t}$を適宜代入することで得られる．
+    \subsection{SORT+DepthSORTによるマッチング}
