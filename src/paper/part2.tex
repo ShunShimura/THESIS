@@ -110,6 +110,7 @@
 次に，共焦点顕微鏡から得られる複数のスライス画像の定式化を行う．共焦点顕微鏡は，焦点面を調整することで複数の高さにおけるスライス画像を得ることができる顕微鏡であった．この特性を用いて，本システムでは焦点面を変えながら図\ref{fig:slicing}のように複数の高さにおけるスライス画像を取得する．このスライスの枚数を$n_s$と定義する．この$n_s$枚のスライス画像取得を一時刻分の入力データとすると，ある時刻$t$における入力データ$\mathcal{X}_t$は，
 
 \begin{equation}
+    \label{eq:input_images}
     \begin{aligned}
         \mathcal{X}_t &\equiv \left\{ \left.X^{(t,s)}\right| s \in \left\{1,2,\dots,n_s\right\} \right\}
         \\ X^{t,s} &\in \mathbb{R}^{W \times H \times 3}

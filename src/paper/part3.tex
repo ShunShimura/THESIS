@@ -97,54 +97,54 @@
     SORT（Simple Online Realtime Tracking）は，YOLOなどの物体検出によって得られたBonding-Boxの時系列データを入力とし，これらBounding-BoxにIDを振りながら各個体の軌跡を推定する，最も基礎的な手法である．このアルゴリズムは時系列データを処理するKalman Filterと時刻間の対応付けを行うHungarian Algorithmで構成される．まずはこれらの詳細を説明する．
 
         \subsubsection{Kalman Filter}
-        Kalman Filterとは，センサーなどから得られた時系列データからシステム内部の状態を推定するための最適化アルゴリズムである．ここでは時系列データである観測変数を$\bm{y}_1, \bm{y}_2, \dots, \bm{y}_t$，システム内部の状態変数を$\bm{x}_1, \bm{x}_2, \dots, \bm{x}_t$と表記する．Kalman Filterでは状態変数$\bm{x}_t$を推定するために，その確率分布を考える．すなわち，観測系列$\bm{y}_1, \bm{y}_2, \dots, \bm{y}_t$が得られたときの状態変数$\bm{x}_t$の事後分布$p(\bm{x}_t \left| \bm{y}_1, \bm{y}_2, \dots, \bm{y}_t \right.)$を計算する．
+        Kalman Filterとは，センサーなどから得られた時系列データからシステム内部の状態を推定するための最適化アルゴリズムである．ここでは時系列データである観測変数を$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$，システム内部の状態変数を$\bm{s}_1, \bm{s}_2, \dots, \bm{s}_t$と表記する．Kalman Filterでは状態変数$\bm{s}_t$を推定するために，その確率分布を考える．すなわち，観測系列$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$が得られたときの状態変数$\bm{s}_t$の事後分布$p(\bm{s}_t \left| \bm{o}_1, \bm{o}_2, \dots, \bm{o}_t \right.)$を計算する．
         \par
         ベイズの定理から，所望の事後確率は
         \begin{equation}
             \label{eq:filtering1}
-            p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) = \frac{p(\left. \bm{y}_t \right| \bm{y}_1,..., \bm{y}_{t-1}, \bm{x}_t) p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}{p(\left.\bm{y}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}
+            p(\left. \bm{s}_t \right| \bm{o}_1,\dots, \bm{o}_t ) = \frac{p(\left. \bm{o}_t \right| \bm{o}_1,\dots, \bm{o}_{t-1}, \bm{s}_t) p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})}{p(\left.\bm{o}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})}
         \end{equation}
-        と変形できる．また右辺の分子後半部$p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})$は条件付き確率の性質から，
+        と変形できる．また右辺の分子後半部$p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})$は条件付き確率の性質から，
         \begin{equation}
             \label{eq:prediction1}
             \begin{aligned}
-                p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) &= \int p(\left.\bm{x}_t, \bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
-                \\ &= \int p(\left.\bm{x}_t\right|\bm{x}_{t-1}, \bm{y}_1,..., \bm{y}_{t-1}) p(\left.\bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
+                p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1}) &= \int p(\left.\bm{s}_t, \bm{s}_{t-1}\right| \bm{o}_1,\dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
+                \\ &= \int p(\left.\bm{s}_t\right|\bm{s}_{t-1}, \bm{o}_1,\dots, \bm{o}_{t-1}) p(\left.\bm{s}_{t-1}\right| \bm{o}_1,\dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
             \end{aligned}        
         \end{equation}
         と変形できる．
         \par
-        式\ref{eq:filtering1},\ref{eq:prediction1}から，$p(\bm{x}_0\left|\bm{y}_0\right.) = p(\bm{x}_0)$が与えられれば全ての時刻$t=1,2,\dots,t$における$p(\bm{x}_t\left|\bm{y}_1,\dots,\bm{y}_t\right.)$が理論上は計算できる．しかしながら式\ref{eq:filtering1}における右辺の分母や式\ref{eq:prediction1}における右辺には積分が含まれるため，現実には計算できない．そのためKalman Filterでは一般的に，式\ref{eq:linear_setting}に見られる線形性及びマルコフ性をシステムに仮定している（この問題設定におけるKalman Filterを特別に一般線形Kalman Filterと呼ぶこともある）．
+        式\ref{eq:filtering1},\ref{eq:prediction1}から，$p(\bm{s}_0\left|\bm{o}_0\right.) = p(\bm{s}_0)$が与えられれば全ての時刻$t=1,2,\dots,t$における$p(\bm{s}_t\left|\bm{o}_1,\dots,\bm{o}_t\right.)$が理論上は計算できる．しかしながら式\ref{eq:filtering1}における右辺の分母や式\ref{eq:prediction1}における右辺には積分が含まれるため，現実には計算できない．そのためKalman Filterでは一般的に，式\ref{eq:linear_setting}に見られる線形性及びマルコフ性をシステムに仮定している（この問題設定におけるKalman Filterを特別に一般線形Kalman Filterと呼ぶこともある）．
         \begin{equation}
             \label{eq:linear_setting}
             \begin{aligned}
-                \bm{x}_{t+1} &= F_t \bm{x}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
-                \\ \bm{y}_t &= H_t \bm{x}_t + G_t \bm{u}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
+                \bm{s}_{t+1} &= F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
+                \\ \bm{o}_t &= H_t \bm{s}_t + G_t \bm{u}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
             \end{aligned}        
         \end{equation}
         上の式は状態遷移式，下の式は観測方程式と呼ばれる．ここで$F_t$は遷移行列と呼ばれる状態変数の時間遷移を，$H_t$は観測行列と呼ばれる観測変数との対応を表す行列である．また$\bm{v}_t$はシステムノイズ，$\bm{w}_t$は観測ノイズと呼ばれ，正規性を持ったホワイトノイズである．また$\bm{u}_t$はこちら側が制御する入力変数であり，ここでは後述の問題に対応するために観測方程式に加えている．$G_t$はその入力変数が観測変数に与える影響を表す行列である．
         \par
-        式\ref{eq:linear_setting}より，明らかに状態変数$\bm{x}_t$と観測変数$\bm{y}_t$はマルコフ性を持っているため，式\ref{eq:filtering1}及び式\ref{eq:prediction1}は，
+        式\ref{eq:linear_setting}より，明らかに状態変数$\bm{s}_t$と観測変数$\bm{o}_t$はマルコフ性を持っているため，式\ref{eq:filtering1}及び式\ref{eq:prediction1}は，
         \begin{equation}
             \label{eq:filtering2}
             \begin{aligned}
-                p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) &= \frac{p(\left. \bm{y}_t \right| \bm{x}_t) p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}{p(\left.\bm{y}_t\right| \bm{y}_1,..., \bm{y}_{t-1})}
+                p(\left. \bm{s}_t \right| \bm{o}_1,\dots, \bm{o}_t ) &= \frac{p(\left. \bm{o}_t \right| \bm{s}_t) p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})}{p(\left.\bm{o}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})}
             \end{aligned}
         \end{equation}
         \begin{equation}
             \label{eq:prediction2}
             \begin{aligned}
-                p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) = \int p(\left.\bm{x}_t\right|\bm{x}_{t-1}) p(\left.\bm{x}_{t-1}\right| \bm{y}_1,..., \bm{y}_{t-1}) d\bm{x}_{t-1}
+                p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1}) = \int p(\left.\bm{s}_t\right|\bm{s}_{t-1}) p(\left.\bm{s}_{t-1}\right| \bm{o}_1,\dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
             \end{aligned}
         \end{equation}
         と書き換えられる．
         \par
-        また式\ref{eq:linear_setting}より，$\bm{x}_t$及び$\bm{y}_t$は$\bm{x}_{t-1}$が正規分布に従えば，線形な式であるためにこれらもまた正規分布に従うことが分かる．すなわち$p(\bm{x}_0)$に正規分布を仮定すれば，全ての$t$で状態変数$\bm{x}_t$と観測変数$\bm{y}_t$は正規分布に従う．よって，式\ref{eq:filtering2}と式\ref{eq:prediction2}は式\ref{eq:normal_format}のように表すことができ，
+        また式\ref{eq:linear_setting}より，$\bm{s}_t$及び$\bm{o}_t$は$\bm{s}_{t-1}$が正規分布に従えば，線形な式であるためにこれらもまた正規分布に従うことが分かる．すなわち$p(\bm{s}_0)$に正規分布を仮定すれば，全ての$t$で状態変数$\bm{s}_t$と観測変数$\bm{o}_t$は正規分布に従う．よって，式\ref{eq:filtering2}と式\ref{eq:prediction2}は式\ref{eq:normal_format}のように表すことができ，
         \begin{equation}
             \label{eq:normal_format}
             \begin{aligned}
-                p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t ) &= \mathcal{N}(\bm{\mu}_{t|t}, \Sigma_{t|t})
-                \\ p(\left.\bm{x}_t\right| \bm{y}_1,..., \bm{y}_{t-1}) &= \mathcal{N}(\bm{\mu}_{t|t-1}, \Sigma_{t|t-1})
+                p(\left. \bm{s}_t \right| \bm{o}_1,\dots, \bm{o}_t ) &= \mathcal{N}(\bm{\mu}_{t|t}, \Sigma_{t|t})
+                \\ p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1}) &= \mathcal{N}(\bm{\mu}_{t|t-1}, \Sigma_{t|t-1})
             \end{aligned}
         \end{equation}
         以下のように状態遷移式及び観測方程式上の行列で表現でき，計算可能となる．
@@ -152,19 +152,57 @@
             \begin{aligned}
                 \bm{\mu}_{t|t-1} &= F_{t-1} \bm{\mu}_{t-1|t-1}
                 \\\Sigma_{t|t-1} &= F_{t-1} \Sigma_{t-1|t-1} F_{t-1}^{\top} + Q_{t-1}
-                \\\bm{\mu}_{t|t} &= \Sigma_{t|t} \left( H_t R_t^{-1} \bm{y}_t + \Sigma_{t|t-1}^{-1} \bm{\mu}_{t|t-1} \right)
+                \\\bm{\mu}_{t|t} &= \Sigma_{t|t} \left( H_t R_t^{-1} \bm{o}_t + \Sigma_{t|t-1}^{-1} \bm{\mu}_{t|t-1} \right)
                 \\\Sigma_{t|t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t|t-1}^{-1}\right)^{-1}
             \end{aligned}                    
         \end{equation}
+        また一般的にはKalman Gain，$K_t$を，
+        \begin{equation}
+            \label{eq:kalman_gain}
+            K_t \equiv \Sigma_{t|t-1}H_t^{\top} \left( H_t\Sigma_{t|t-1}H_t^{\top} + R_t\right)^{-1}
+        \end{equation}
+        と定義して，代わりに以下の式を用いる．
+        \begin{equation}
+            \label{eq:kalman_equations}
+            \begin{aligned}
+                \bm{\mu}_{t|t-1} &= F_{t-1} \bm{\mu}_{t-1|t-1}
+                \\\Sigma_{t|t-1} &= F_{t-1} \Sigma_{t-1|t-1} F_{t-1}^{\top} + Q_{t-1}
+                \\\bm{\mu}_{t|t} &= \bm{\mu}_{t|t-1} + K_t \left(\bm{o}_t - H_t \bm{\mu}_{t|t-1}\right)
+                \\\Sigma_{t|t} &= (I - K_t H_t) \Sigma_{t|t-1}
+            \end{aligned}                    
+        \end{equation}
+        ここで$I$は単位行列である．
 
-        またKalman Filterでは，事後確率が最大な点を推定値とする．すなわち観測系列$\bm{y}_1,\bm{y}_2,\dots,\bm{y}_t$が得られたときの最適状態変数推定値$\hat{\bm{x}}_{t|t}$は，
+        またKalman Filterでは，事後確率が最大な点を推定値とする．すなわち観測系列$\bm{o}_1,\bm{o}_2,\dots,\bm{o}_t$が得られたときの最適状態変数推定値$\hat{\bm{s}}_{t|t}$は，
         \begin{equation}
             \begin{aligned}
-                \hat{\bm{x}}_{t|t} &= \underset{\bm{x}_t \in \mathbb{R}^{n}}{\text{argmax}}\ p(\left. \bm{x}_t \right| \bm{y}_1,..., \bm{y}_t )
+                \hat{\bm{s}}_{t|t} &= \underset{\bm{s}_t \in \mathbb{R}^{n}}{\text{argmax}}\ p(\left. \bm{s}_t \right| \bm{o}_1,\dots, \bm{o}_t )
                 \\ &= \bm{\mu}_{t|t}
             \end{aligned}
         \end{equation}
         で与えられる．ここで$n$は状態変数の次元数である．
+        \par
+        以上の議論を踏まえ，観測系列$\bm{o}_1,\bm{o}_2,\dots, \bm{o}_T$が得られた時に状態変数$\bm{s}_T$の推定値$\hat{\bm{s}}_T$を計算するアルゴリズムをアルゴリズム\ref{alg:kalman_filter}に示す．ただしここでは簡単のため，遷移行列$F_t$，観測行列$H_t$，システムノイズ共分散行列$Q_t$，観測ノイズ共分散行列$R_t$は定常であることを仮定している．
+
+        \begin{algorithm}[t]
+            \caption{Kalman Filter}
+            \label{alg:kalman_filter}
+            \begin{algorithmic}[1]
+                \REQUIRE $\bm{o}_1,\bm{o}_2,\dots, \bm{o}_T, F, H, Q, R, \bm{\mu}_{0|0}, \Sigma_{0|0}$
+                \ENSURE $\hat{\bm{s}}_T$
+                \STATE \textbf{Initialize: } $\hat{\bm{s}}_t,K_t, \bm{\mu}_{t|t-1}, \Sigma_{t|t-1}, \bm{\mu}_{t|t} \leftarrow \bm{\mu}_{0|0}, \Sigma_{t|t} \leftarrow \Sigma_{0|0}$
+                \FOR {$t = 1 \text{ to } T$}
+                    \STATE $\bm{\mu}_{t|t-1} \leftarrow F \bm{\mu}_{t-1|t-1}$
+                    \STATE $\Sigma_{t|t-1} \leftarrow F \Sigma_{t-1|t-1} F^{\top} + Q$
+                    \STATE $K_t \leftarrow \Sigma_{t|t-1} H^{\top} \left(H\Sigma_{t|t-1}H^{\top} + R\right)$
+                    \STATE $\bm{\mu}_{t|t} \leftarrow \bm{\mu}_{t|t-1} + K_t \left(\bm{o}_t - H\bm{\mu}_{t|t-1}\right)$
+                    \STATE $\Sigma_{t|t} \leftarrow \left(I - K_t H\right) \Sigma_{t|t-1}$
+                \ENDFOR
+                \RETURN $\bm{\mu}_{t|t}$
+            \end{algorithmic}
+        \end{algorithm}
+
+        以後，アルゴリズム\ref{alg:kalman_filter}における$3,4$行目を観測予測，$5,6,7$行目を状態更新と呼ぶことにする．
 
         \subsubsection{Hungarian Algorithm}
         後回し！！！
@@ -177,11 +215,11 @@
             \includegraphics[width=\textwidth]{fig/sort.pdf}
             \caption{時刻$t=4$におけるSORTの処理の概略図}
             \small
-            SORTではBounding-Boxを観測変数として状態変数の推定を行う．このときに複数のBounding-Boxを同一個体へ割り当てるために対応付けを行う．図のように，対応付けは物体検出によって得たBouning-BoxとKalman Filterによる予測位置間で行う．図の例では，赤色と緑色の物体は更新が行われている．またどの予測位置とも対応づかなかったものは新しい個体として認識される（黄色）．
+            SORTではBounding-Boxを観測変数として状態変数の推定を行う．このときに複数のBounding-Boxを同一個体へ割り当てるために対応付けを行う．図のように，対応付けは物体検出によって得たBouning-Boxと観測予測による予測Bouding-Box間で行う．図の例では，赤色と緑色の物体は状態更新が行われている．またどの予測Bounding-Boxとも対応づかなかったものは新しい個体として認識される（黄色）．
             \label{fig:sort}
         \end{figure}
 
-        アルゴリズム\ref{alg:sort}に時刻$t$におけるSORTの処理を示す．（閾値の話からスタート！！）
+        アルゴリズム\ref{alg:sort}に時刻$t$におけるSORTの処理を示す．13行目における$active\_tracks$関数では，時刻$t$に状態更新が行われなかったトラック集合$\mathcal{T}_{t-1}/\mathcal{T}_t$の中から，連続で状態更新されなかった回数が$\sigma_a$より小さいものを出力する．これにより，重なり合いなどで見えなくなった個体も$\sigma_a$の間に復帰すれば追跡できるようになっている．
 
         \begin{algorithm}[t]
             \caption{SORT}
@@ -189,7 +227,7 @@
             \begin{algorithmic}[1]
                 \REQUIRE $\mathcal{T}_{t-1} = \left\{ \left. T^{(i)}\right| i \in \mathcal{I}_{t-1}\right\} , \mathcal{B}_t = \left\{\left. B^{(j)} \in \mathbb{R}^{4}\right| j \in \left\{1,2,\dots,n\right\}\right\},\sigma_a$ 
                 \ENSURE $\mathcal{T}_t = \left\{ \left. T^{(i)}\right| i \in \mathcal{I}_{t} \right\}$
-                \STATE $\textbf{Initialize: } \mathcal{P}_t = \emptyset,\ \mathcal{T}_t = \emptyset$
+                \STATE $\textbf{Initialize: } \mathcal{P}_t = \emptyset,\mathcal{T}_t = \emptyset, S_t^{\text{pred}} = \emptyset, S_t^{\text{init}} = \emptyset$
                 \FOR {$T^{(i)} \in \mathcal{T}_{t-1}$}
                     \STATE $\hat{\bm{s}}_{t-1}^{(i)} = \text{GET}(T^{(i)},\hat{\bm{s}}_{t-1}^{(i)})$
                     \STATE $\mathcal{P}_t \leftarrow \mathcal{P}_t \cup kalman\_predict(\hat{\bm{s}}_{t-1}^{(i)})$
@@ -199,22 +237,151 @@
                     \STATE $B^{(j)} = \text{GET}(\mathcal{B}_t, B^{(j)})$
                     \STATE $\hat{\bm{s}}_t^{(i)} = kalman\_filtering(B^{(j)})$
                     \STATE $T^{(i)} \leftarrow T^{(i)} \cup \hat{\bm{s}}_t^{(i)}$
+                    \STATE $S_t^{\text{pred}} \leftarrow S_t^{\text{pred}} \cup \hat{\bm{s}}_t^{(i)}$
+                    \STATE $S_t^{\text{init}} \leftarrow S_t^{\text{init}} \cup \text{GET}(T^{(i)}, \hat{\bm{s}}_{t_s}^{(i)})$
                     \STATE $\mathcal{T}_t \leftarrow \mathcal{T}_t \cup T^{(i)}$
                 \ENDFOR
                 \STATE $\mathcal{T}_t \leftarrow active\_tracks(\mathcal{T}_{t-1} / \mathcal{T}_t, \sigma_a)$
-                \RETURN $\mathcal{T}_t$
+                \RETURN $\mathcal{T}_t, S_t^{\text{pred}}, S_t^{\text{init}}$
             \end{algorithmic}
         \end{algorithm}
 
     \subsection{既存手法適用における問題点}
+    本問題設定が既存手法における問題設定と大きく異なる点は，対象空間が３次元であり，時刻$t$における入力画像が一枚ではなく$n_s$枚あることである．これによって生じる問題点の一つ目は，追跡によって我々が得たい情報が異なることである．既存手法が対象にしている問題設定では，時刻$t_1$における個体$i$が時刻$t_2$におけるどの個体であるのか，といったことに興味がある．そのために対応付けが行われ，Kalman Filterは対応付けのためのBounding-Box予測の一手法として用いられていた．しかしながら我々の問題設定では，むしろKalman Filterの状態予測の方に興味がある．またここでいう状態変数とは，式\ref{eq:sort_state}のようなBounding-Boxの予備情報ではなく，式\ref{eq:discreation}で表せられる，３次元空間上の物理量である．すなわち，Kalman Filterの再設計が必要である．
+    \par
+    またこの設計に伴って，二つ目の問題が生じる．それが，観測変数をどのように得るか，という問題である．既存手法のSORTでは，一個体一時刻につき観測変数はBounding-Box一つに対応していた．もし仮に，複数のスライス画像のうちある一つのスライスを選び，その時系列画像データにYOLO+SORTを適用した場合には，Bounding-Boxの時系列データが得られる．しかしながら，この二次元空間の情報から前述した三次元空間の情報を推定することは原理的に困難である．すなわち三次元空間の物理量を推定するためには，図\ref{fig:existing_problem}のように必ず他のスライスの情報も観測変数に加えなければならない．すなわち，対応付けによってBounding-BoxにIDを割り振る際に，同時に他のスライス上のBounding-Boxにも共通のIDを割り振らなければならない．
 
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{fig/existing_problem.pdf}
+        \caption{既存手法の問題点}
+        \small
+        \label{fig:existing_problem}
+    \end{figure}
+
+    以降の節では，まず一つ目の問題に対処するためにSliceKalmanFilterという手法を提案する．またこのSliceKalmanFilterの観測系列を得る手法として，観測予測による対応付けとSORT+DepthSORTによる対応付けの二つの手法を提案する．
 
 \section{提案手法の設計思想}
+既存手法を本問題設定に適用するうえで生じる問題点を再掲する．
+\begin{enumerate}[label=(\arabic*)]
+    \item SORTでは観測系列にIDを割り振ることに重きを置くが，本問題設定では三次元空間の物理量で表せられる状態を推定したい．
+    \item (1)の状態を推定するために，複数のスライスにおけるBounding-Boxを観測系列に含めたい．
+\end{enumerate}
 
+まず(1)の問題に対処するために，Kalman Filterの状態変数と観測変数を三次元空間上における物理量を推定できるように書き換える．ここでは便宜上，このKalman Filterを特別にSliceKalmanFilterと呼ぶことにする．
+    
 \section{SliceKalmanFilterの設計}
+状態変数$\bm{s}_t$は式\ref{eq:discreation}にあるように，三次元空間上の物理量を用いて，
+\begin{equation}
+    \label{eq:skf_state}
+    \bm{s}_t = \left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]
+\end{equation}
+と定める．
+このとき状態遷移式は一般線形Kalman Filterと同様に，
+\begin{equation}
+    \bm{s}_{t+1} = F_t \bm{s}_t + \bm{v}_t,\quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
+\end{equation}
+で表され，遷移行列$F_t$は式\ref{eq:time_transition}を満たすように設計される．また半径$r_t$は定常であることを仮定している．
+\par
+一方観測変数は問題点(2)で述べたように，複数のスライスにおけるBounding-Boxでなければいけない．しかしここで一度，状態変数$\bm{s}_t$からあるスライス$s$のBounding-Box$\bm{o}_s$を出力する関数$h_s(\cdot)$を考える．すると$h_s(\bm{s}_t)$は，
+\begin{equation}
+    \label{eq:single_map}
+    h_s(\bm{s}_t) = \left\{
+        \begin{aligned}
+            &\left[x_{t'}, y_{t'}, 2\sqrt{r_{t'}^2 - \left(z_{t'} - z(s)\right)^2} \right]& &\quad \textbf{if }r_{t'} > \left| z_{t'} - z(s) \right|,
+            \\ &\text{None}& &\quad \textbf{else }
+        \end{aligned}
+    \right.
+\end{equation}
+と表せられる．これはすなわち，状態変数$\bm{s}_t$の値によって，予測する観測変数$H_t \bm{s}_t$の次元数が可変であることを示している．さらに当然ながら，個体の大きさやタイミングによってその個体が存在しないスライスが生じるため，得られる観測変数$\bm{o}_t$の次元数も可変である．しかし式\ref{eq:kalman_equations}に着目すると，これら二者の次元数は一致していなければならないことが分かる．
+\par
+以上の議論より，\ref{eq:single_map}において右辺の条件式$r_{t'} > \left| z_{t'} - z(s) \right|$を満たすスライスの集合を$\mathcal{S}^{\text{pred}}_t$，Bounding-Boxが観測されたスライスの集合を$\mathcal{S}_t^{\text{obs}}$として，観測変数を以下のように集合として定義する．
+\begin{equation}
+    \label{eq:skf_obs}
+    \begin{aligned}
+        \mathcal{O}_t &= \left\{\left.\bm{o}_s\right| s \in \mathcal{S}_t^{\text{pred}} \cap \mathcal{S}_t^{\text{obs}} \subset \left\{1,2,\dots,n_s\right\} \right\}
+        \\ \bm{o}_s &= \left[x_s, y_s, w_s, h_s\right]
+    \end{aligned}    
+\end{equation}
+またこのとき観測方程式は，式\ref{eq:single_map}を用いて，
+\begin{equation}
+    \label{eq:skf_obs_eq}
+    \bm{o}_s = h_s(\bm{s}_t) + \bm{w}_{t,s}, \quad \bm{w}_{t,s} \sim \mathcal{N}(\bm{0}, R_{t}),\quad \forall s \in \mathcal{S}_t^{\text{pred}} \cap \mathcal{S}_t^{\text{obs}}
+\end{equation}
+と表せられる．
+\par
+式\ref{eq:skf_obs_eq}では，観測変数と状態変数が非線形な関係$h_s(\cdot)$で結ばれている．このままでは前述のKalman Filterの演算を実行できないため，ExpandKalmanFilter（拡張カルマンフィルタ）の枠組みを利用する．まずは非線形な観測写像$h(\bm{s}_t)$の線形化を行うために，ある推定値$\hat{\bm{s}}_t$周りで一次Taylor展開を行って，
+\begin{equation}
+    \begin{aligned}
+        h(\bm{s}_t) &= h(\hat{\bm{s}}_t) + \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t=\hat{\bm{s}}_t} \left(\bm{s}_t - \hat{\bm{s}}_t\right) + \mathcal{O}(\bm{s}_t^2)
+        \\ &= \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t=\hat{\bm{s}}_t} \bm{s}_t + h(\hat{\bm{s}}_t) - \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t=\hat{\bm{s}}_t} \hat{\bm{s}}_t + \mathcal{O}(\bm{s}_t^2)
+    \end{aligned}
+\end{equation}
+と変形できる．ここで右辺第一項を$H_t \bm{s}_t$，第二項以降を$G_t \bm{u}_t$とおくと，式\ref{eq:linear_setting}の観測方程式と一致することが分かる．よって$H_t$を$\left.\partial h / \partial \bm{s}_t\right|_{\bm{s}_t=\hat{\bm{s}}_t}$，$H_t \bm{s}_t + G_t \bm{u}_t$を$h(\bm{s}_t)$とすれば一般線形Kalman Filterと同様の演算で推定値を求めることができる．またある推定値$\hat{\bm{s}}_t$には$\bm{\mu}_{t|t-1}$を用いればよい．
 
 \section{スライス３次元画像におけるReID}
+次に観測変数集合$\mathcal{O}_t$をどのように得るかを説明する．ここでの入力は，ある時刻$t$で取得された複数のスライス画像$\mathcal{X}_t$（\ref{eq:input_images}参照）を物体検出に入力して得られたBounding-Boxの集合$\mathcal{B}_t$である．ただしスライスが異なるBounding-Boxを区別するため，以下のような集合であるとする．すなわち$\mathcal{B}_{t,s}$が，時刻$t$のスライス$s$から得られたBounding-Boxの集合を表す．
+\begin{equation}
+    \begin{aligned}
+        \mathcal{B}_t &= \left\{\left.\mathcal{B}_{t,s}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}
+        \\\mathcal{B}_{t,s} &= \left\{\left.\bm{o}_{t,s}^{(i)}\right|i \in \mathbb{N}_{+}\right\}
+    \end{aligned}
+\end{equation}
+
+我々の目的は，この$\mathcal{B}_t$のうち，どのBounding-Boxが時刻$t-1$まで追跡してきた個体由来のものであるかを対応付けさせ，また対応づかないものには新しい追跡対象として新しいIDを付与することである．すなわちここでの出力$\mathcal{B}_t^{\text{reid}}$は，
+\begin{equation}
+    \begin{aligned}
+        \mathcal{B}_t^{\text{reid}} &= \left\{\left.\mathcal{O}_t^{(i)}\right| i \in \mathcal{I}_t\right\}
+        \\ \mathcal{O}_t^{(i)} &= \left\{\left.\bm{o}_{t,s}^{(i)}\right| s \in \mathcal{S}_t^{\text{obs},(i)} \subset \left\{1,2,\dots,n_s\right\}\right\}
+    \end{aligned}
+\end{equation}
+と表せられる．ここで$\mathcal{I}_t$は時刻$t$で追跡している個体IDの集合，$\mathcal{S}_t^{\text{obs},(i)}$は時刻$t$において個体$i$に対応付けられたBounding-Boxが検出されたスライスの集合である．
+\par
+$\mathbb{B}_t^{\text{reid}}$を得るための直感的な手法は，既存手法SORTと同様に，状態変数から各スライスで検出されるBouding-Boxを予測し，それらと実際に検出されたBounding-Boxを比較し，ハンガリアンアルゴリズムなどによって対応付ける手法である．まずはこちらの手法について説明する．
 
     \subsection{SliceKalmanFilter予測によるマッチング}
+    時刻$t-1$までに$\left|\mathcal{I}_{t-1}\right|$個の個体を追跡できており，それぞれの状態変数推定値$\hat{\bm{s}}_{t-1}^{(i)}$を計算済みであると仮定する（ただし$i \in \mathcal{I}_{t-1}$）．
+    \par
+    式\ref{eq:single_map}によりこれらの状態変数から，時刻$t$に得られるBounding-Box集合$\mathcal{B}_t$に対応する予測集合$\mathcal{B}_t^{\text{pred}}$を得ることができる．すなわち，
+    \begin{equation}
+        \begin{aligned}
+            \mathcal{B}_t^{\text{pred}} &= \left\{\left.B_{t,s}^{\text{pred}}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}
+            \\ B_{t,s}^{\text{pred}} &= \left\{\left.\bm{o}_{t,s}\right| \bm{o}_{t,s} \in \mathcal{P}_{t,s} \subset \mathcal{P}_t\right\}
+            \\ \mathcal{P}_t &= \bigcup_{i \in \mathcal{I}_{t-1}} \left\{\left.h_s(\hat{\bm{s}}_{t-1})\right| s \in \mathcal{S}_{t-1}^{\text{pred},(i)}\right\}
+        \end{aligned}
+    \end{equation}
+    ここで$\mathcal{P}_{t,s}$は予測されたBounding-Box集合$\mathcal{P}_t$のうちスライス$s$における予測の集合，$\mathcal{S}_{t-1}^{\text{pred},(i)}$は時刻$t-1$において個体$i$の状態変数推定値$\bm{s}_{t-1}^{(i)}$が式\ref{eq:single_map}の右辺の条件式を満たすことができるスライスの集合を表している．
+    \par
+    これらスライスごとの予測集合$\mathcal{P}_{t,s}$と観測集合$\mathcal{B}_{t,s}$があれば，SORTと同様にHungarian Algorithmによる対応付けが可能である．以上の流れをアルゴリズム\ref{alg:skf_matching}に示す．
+    \begin{algorithm}[t]
+        \caption{Sliced-ReID by SKF's Prediction}
+        \label{alg:skf_matching}
+        \begin{algorithmic}[1]
+            \REQUIRE $\mathcal{T}_{t-1} = \left\{ \left. T^{(i)}\right| i \in \mathcal{I}_{t-1}\right\} , \mathcal{B}_t = \left\{\left. \mathcal{B}_{t,s} \right| s \in \left\{1,2,\dots,n_s\right\}\right\},\sigma_a$ 
+            \ENSURE $\mathcal{B}_t^{\text{reid}} = \left\{\left.\mathcal{O}_t^{(i)}\right|i \in \mathcal{I}_t\right\}$
+            \STATE $\textbf{Initialize: } \mathcal{T}_t = \emptyset, \mathcal{I}_t = \emptyset,\mathcal{P}_{t,1} = \mathcal{P}_{t,2}=\dots=\mathcal{P}_{t,n_s} = \emptyset$
+            \FOR {$T^{(i)} \text{ in } \mathcal{T}_{t-1}$}
+                \FOR {$s = 1 \text{ to } n_s$}
+                    \STATE $\hat{\bm{s}}_{t-1}^{(i)} = \text{GET}(T^{(i)}, \hat{\bm{s}}_{t-1}^{(i)})$
+                    \STATE $\mathcal{P}_{t,s} \leftarrow \mathcal{P}_{t,s} \cup h_s(\hat{\bm{s}}_{t-1}^{(i)})$
+                \ENDFOR
+            \ENDFOR
+            \FOR {$s = 1 \text{ to } n_s$}
+                \STATE $M_{t,s} = hungarian\_matching(\mathcal{P}_{t,s}, \mathcal{B}_{t,s})$
+                \FOR {$(i,j) \text{ in } M_{t,s}$}
+                    \STATE $\bm{o}_{t,s}^{(j)} = \text{GET}(\mathcal{B}_{t,s})$
+                    \STATE $\mathcal{O}_t^{(i)} = \left\{\bm{o}_{t,s}^{(j)}\right\} \textbf{ if } \mathcal{O}_t^{(i)} \text{ is undefined} \textbf{ else } \mathcal{O}_t^{(i)} \leftarrow \mathcal{O}_t^{(i)} \cup \bm{o}_{t,s}^{(j)}$
+                    \STATE $\mathcal{I}_t \leftarrow \mathcal{I}_t \cup i$
+                \ENDFOR
+            \ENDFOR
+            \RETURN $\left\{\left.\mathcal{O}_t^{(i)}\right|i \in \mathcal{I}_t\right\}$
+        \end{algorithmic}
+    \end{algorithm}
+
+    また時刻$t=1$における対応付では，（保留！！KFの方も書き換えなきゃ）
+    \par
+    しかしながらこの手法には懸念点が一つある．それは，式\ref{eq:skf_obs}において観測変数の集合を構築する際に，予測が存在するスライス集合$\mathcal{S}_t^{\text{pred}}$と観測が存在するスライス集合$\mathcal{S}_t^{\text{obs}}$の積集合にのみ着目している点である．これにより，物体検出の偽陰性や状態変数の推定に大きな誤差があったときに観測変数の情報は希薄になってしまい，さらなる推定精度の低下に繋がりかねない．
+    \par
+    この懸念点に対応するために，SORTのような二次元空間における物体追跡情報を利用した手法を次節で提案する．
 
     \subsection{SORT+DepthSORTによるマッチング}
