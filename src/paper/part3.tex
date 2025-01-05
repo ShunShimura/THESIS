@@ -15,6 +15,7 @@
 で表せられ，物体の状態変数$\bm{s}_t$は，
 
 \begin{equation}
+    \label{eq:sort_state}
     \bm{s}_t \equiv \left[x_t, \dot{x}_t, y, \dot{y}_t, w, h\right]
 \end{equation}
 で表せられる．もちろん位置$(x,y)$の二階時間微分やサイズ$w,h$の一階時間微分を加えることも可能であるが，本論文では議論しない．
@@ -168,8 +169,45 @@
         \subsubsection{Hungarian Algorithm}
         後回し！！！
 
+        \subsubsection{SORTのアルゴリズム}
+        ここからは，SORTの具体的な処理の流れを説明する．SORTでは，YOLOなどの物体検出によって得られたBounding-Boxの情報$\left[x, y, w, h\right]$を観測変数$\bm{o}_t$として，各物体の状態変数$\bm{s}_t$（式\ref{eq:sort_state}参照）の推定を行う．しかし，時刻$t$の画像の中には複数の物体が存在しうるため，どのBounding-Boxが時刻$t-1$まで追跡してきた物体のいずれかと同一であるかは分からない．そこで用いられるのがHungarian Algorithmによる対応付けである．これにより，時刻$t-1$まで追跡してきた個体と同一であるBounding-Boxにはその個体のIDが振られ，Kalman Filterの観測変数として利用される（図\ref{fig:sort}参照）．
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=\textwidth]{fig/sort.pdf}
+            \caption{時刻$t=4$におけるSORTの処理の概略図}
+            \small
+            SORTではBounding-Boxを観測変数として状態変数の推定を行う．このときに複数のBounding-Boxを同一個体へ割り当てるために対応付けを行う．図のように，対応付けは物体検出によって得たBouning-BoxとKalman Filterによる予測位置間で行う．図の例では，赤色と緑色の物体は更新が行われている．またどの予測位置とも対応づかなかったものは新しい個体として認識される（黄色）．
+            \label{fig:sort}
+        \end{figure}
+
+        アルゴリズム\ref{alg:sort}に時刻$t$におけるSORTの処理を示す．（閾値の話からスタート！！）
+
+        \begin{algorithm}[t]
+            \caption{SORT}
+            \label{alg:sort}
+            \begin{algorithmic}[1]
+                \REQUIRE $\mathcal{T}_{t-1} = \left\{ \left. T^{(i)}\right| i \in \mathcal{I}_{t-1}\right\} , \mathcal{B}_t = \left\{\left. B^{(j)} \in \mathbb{R}^{4}\right| j \in \left\{1,2,\dots,n\right\}\right\},\sigma_a$ 
+                \ENSURE $\mathcal{T}_t = \left\{ \left. T^{(i)}\right| i \in \mathcal{I}_{t} \right\}$
+                \STATE $\textbf{Initialize: } \mathcal{P}_t = \emptyset,\ \mathcal{T}_t = \emptyset$
+                \FOR {$T^{(i)} \in \mathcal{T}_{t-1}$}
+                    \STATE $\hat{\bm{s}}_{t-1}^{(i)} = \text{GET}(T^{(i)},\hat{\bm{s}}_{t-1}^{(i)})$
+                    \STATE $\mathcal{P}_t \leftarrow \mathcal{P}_t \cup kalman\_predict(\hat{\bm{s}}_{t-1}^{(i)})$
+                \ENDFOR
+                \STATE $M = hungarian\_matching(\mathcal{P}_t, \mathcal{B}_t)$
+                \FOR {$(i, j) \in M$}
+                    \STATE $B^{(j)} = \text{GET}(\mathcal{B}_t, B^{(j)})$
+                    \STATE $\hat{\bm{s}}_t^{(i)} = kalman\_filtering(B^{(j)})$
+                    \STATE $T^{(i)} \leftarrow T^{(i)} \cup \hat{\bm{s}}_t^{(i)}$
+                    \STATE $\mathcal{T}_t \leftarrow \mathcal{T}_t \cup T^{(i)}$
+                \ENDFOR
+                \STATE $\mathcal{T}_t \leftarrow active\_tracks(\mathcal{T}_{t-1} / \mathcal{T}_t, \sigma_a)$
+                \RETURN $\mathcal{T}_t$
+            \end{algorithmic}
+        \end{algorithm}
+
     \subsection{既存手法適用における問題点}
-    
+
 
 \section{提案手法の設計思想}
 
