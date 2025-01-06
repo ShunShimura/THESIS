@@ -205,7 +205,62 @@
         以後，アルゴリズム\ref{alg:kalman_filter}における$3,4$行目を観測予測，$5,6,7$行目を状態更新と呼ぶことにする．
 
         \subsubsection{Hungarian Algorithm}
-        後回し！！！
+        Hungarian Algorithm\cite{kuhn1955hungarian}は，複数個のタスクを複数の作業者に最適に割り当てる，割当問題の数理アルゴリズムである．この節では，割当問題の定式化と，タスクと作業者の個数が異なる問題への適用方法を述べる．
+        
+        割当問題を考えるために，$n$個のタスク$a_1, a_2, \dots, a_n$とそれらのタスクを割り当てられる$n$人の作業者$b_1, b_2, \dots, b_n$が存在すると仮定する．またある作業者$b_j$がタスク$a_i$をこなしたときの成果を$s_{ij}$と定義し，この成果を並べた行列$S \in \mathbb{R}_+^{n \times n}$をスコア行列と呼ぶこととする．また，どの作業者がどのタスクをこなしたのかを示す行列を割当行列と呼び，$Q \in \{0, 1\}^{n \times n}$で表す．この$Q$の$i$行目$j$列目の成分$q_{ij}$が$1$であれば，作業者$b_j$がタスク$a_i$をこなしたことを示し，$0$であればこなしていないことを示している．
+
+        Hungarian Algorithmの出力は，この得られる成果を最大化する割当行列$Q^*$，すなわち
+        \begin{equation}
+            \label{eq:assignment_objective}
+            Q^* = \underset{Q}{\text{argmax}} \sum_{(i,j)} c_{ij} q_{ij}
+        \end{equation}
+        である．また制約として，
+        \begin{equation}
+            \label{eq:assignment_constraint}
+            \begin{aligned}
+                \sum_i q_{ij} &= 1, \quad \forall j = 1, 2, \dots, n
+                \\ \sum_j q_{ij} &= 1, \quad \forall i = 1, 2, \dots, n
+            \end{aligned}
+        \end{equation}
+        が課される．すなわち，各タスクを割り当てられるのは一人であり，一人の作業者が行うタスクもまた一つである．また作業者のいないタスクとタスクが割り当てられていない作業者もなしとしている．
+
+        ここまでは，タスクと作業者の個数が同じ場合の割当問題を説明してきたが，一般的な割当問題では，作業者やタスクに余りがある場合も考えられる．すなわち$m$人の作業者$b_1, b_2, \dots, b_m$を考えたときに，$n \neq m$の場合も考えられる．ここでは，タスクに余りがある場合（$n > m$）には$n-m$個のタスクには作業者を割り当てず，作業者に余りがある場合（$n < m$）には$m-n$人の作業者に仕事を割り当てない問題を考える．すなわち制約\ref{eq:assignment_constraint}は，
+        \begin{equation}
+            \label{eq:assignment_constraint2}
+            \begin{aligned}
+                \sum_i q_{ij} &\in \{0, 1\}, \quad \forall j = 1, 2, \dots, n
+                \\ \sum_j q_{ij} &\in \{0, 1\}, \quad \forall i = 1, 2, \dots, n
+                \\ \sum_{i,j} q_{ij} &= \min (n, m)
+            \end{aligned}
+        \end{equation}
+        と書き換えられる．
+
+        この場合はスコア行列および割当行列が正方行列でなくなるため，Hungarian Algorithmを用いることができない．そこで，新たな行および列を足すことで正方行列を作り出すことを考える．スコア行列$S \in \mathbb{R}_+^{n \times m}$において$n > m$の場合は，要素が全て$0$の部分行列を補うことで$S \in \mathbb{R}_+^{n \times n}$とし，$n < m$の場合は同様にして$S \in \mathbb{R}_+^{m \times m}$とする．この新たに補われた部分に該当するタスクおよび作業者をダミータスクおよびダミー作業者と呼ぶことにする．
+
+        $n > m$の場合は，いくつかのタスクがダミー作業者に割り当てられることになる．しかしダミー作業者に割り当てられると，それにより得られるスコアは$0$である．よって作業者には合計スコアを最大にするようなタスクが割り当てられるため，この解は制約\ref{eq:assignment_constraint2}のもとで計算された最適解\ref{eq:assignment_objective}と同じになる．また$n < m$の場合も同様に，ダミータスクをある作業者に割り当てた際に得られるスコアも$0$であるため，スコアが$0$より大きいタスクが優先的に作業者に割り当てられ，やはり\ref{eq:assignment_constraint2}のもとで計算された最適解と同じになる．
+        
+        以上の議論により，タスク数と作業者数が異なる場合にもHungarian Algorithmを適用することができる．アルゴリズム\ref{alg:hungarian_algorithm}にHungarian Algorithmをタスク集合$A$と作業者集合$B$の割当問題に適用した場合のアルゴリズムを示す．ただしここではスコアを計算する関数$f_{\text{socre}}$を使用している．また出力$M$は割当ペアの集合を表している．
+
+        \begin{algorithm}[t]
+            \caption{Hungarian Algorithm}
+            \label{alg:hungarian_algorithm}
+            \begin{algorithmic}[1]
+                \REQUIRE $A = \left\{a_1, a_2, \dots, a_n\right\}, B = \left\{b_1, b_2, \dots, b_m\right\}$
+                \ENSURE $M = \left\{(i, j) \mid Q^*_{ij} = 1 \mid i \in \left\{1, 2, \dots, n\right\}, j \in \left\{1, 2, \dots, m\right\}\right\}$
+                \STATE $\textbf{Initialize: } S \in \mathbb{R}_+^{\text{max}(n, m) \times \text{max}(n, m)}$
+                \FOR {$i = 0 \text{ to } \text{max}(n, m)$}
+                    \FOR {$j = 0 \text{ to } \text{max}(n, m)$}
+                        \IF {$ i \leq n \text{ and } j \leq m$}
+                            \STATE $S_{ij} \leftarrow f_{\text{score}}(a_i, b_j)$
+                        \ELSE 
+                            \STATE $S_{ij} \leftarrow 0$
+                        \ENDIF
+                    \ENDFOR
+                \ENDFOR
+                \STATE $Q^* = hungarian\_algorithm(S)$
+                \RETURN $\left\{(i, j) \mid Q^*_{ij} = 1 \mid i \in \left\{1, 2, \dots, n\right\}, j \in \left\{1, 2, \dots, m\right\}\right\}$
+            \end{algorithmic}
+        \end{algorithm}
 
         \subsubsection{SORTのアルゴリズム}
         ここからは，SORTの具体的な処理の流れを説明する．SORTでは，YOLOなどの物体検出によって得られたBounding-Boxの情報$\left[x, y, w, h\right]$を観測変数$\bm{o}_t$として，各物体の状態変数$\bm{s}_t$（式\ref{eq:sort_state}参照）の推定を行う．しかし，時刻$t$の画像の中には複数の物体が存在しうるため，どのBounding-Boxが時刻$t-1$まで追跡してきた物体のいずれかと同一であるかは分からない．そこで用いられるのがHungarian Algorithmによる対応付けである．これにより，時刻$t-1$まで追跡してきた個体と同一であるBounding-Boxにはその個体のIDが振られ，Kalman Filterの観測変数として利用される（図\ref{fig:sort}参照）．
@@ -320,8 +375,10 @@
 と変形できる．ここで右辺第一項を$H_t \bm{s}_t$，第二項以降を$G_t \bm{u}_t$とおくと，式\ref{eq:linear_setting}の観測方程式と一致することが分かる．よって$H_t$を$\left.\partial h / \partial \bm{s}_t\right|_{\bm{s}_t=\hat{\bm{s}}_t}$，$H_t \bm{s}_t + G_t \bm{u}_t$を$h(\bm{s}_t)$とすれば一般線形Kalman Filterと同様の演算で推定値を求めることができる．またある推定値$\hat{\bm{s}}_t$には$\bm{\mu}_{t|t-1}$を用いればよい．
 
 \section{スライス３次元画像におけるReID}
+
 次に観測変数集合$\mathcal{O}_t$をどのように得るかを説明する．ここでの入力は，ある時刻$t$で取得された複数のスライス画像$\mathcal{X}_t$（\ref{eq:input_images}参照）を物体検出に入力して得られたBounding-Boxの集合$\mathcal{B}_t$である．ただしスライスが異なるBounding-Boxを区別するため，以下のような集合であるとする．すなわち$\mathcal{B}_{t,s}$が，時刻$t$のスライス$s$から得られたBounding-Boxの集合を表す．
 \begin{equation}
+    \label{eq:input_bboxes}
     \begin{aligned}
         \mathcal{B}_t &= \left\{\left.\mathcal{B}_{t,s}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}
         \\\mathcal{B}_{t,s} &= \left\{\left.\bm{o}_{t,s}^{(i)}\right|i \in \mathbb{N}_{+}\right\}
@@ -337,7 +394,7 @@
 \end{equation}
 と表せられる．ここで$\mathcal{I}_t$は時刻$t$で追跡している個体IDの集合，$\mathcal{S}_t^{\text{obs},(i)}$は時刻$t$において個体$i$に対応付けられたBounding-Boxが検出されたスライスの集合である．
 \par
-$\mathbb{B}_t^{\text{reid}}$を得るための直感的な手法は，既存手法SORTと同様に，状態変数から各スライスで検出されるBouding-Boxを予測し，それらと実際に検出されたBounding-Boxを比較し，ハンガリアンアルゴリズムなどによって対応付ける手法である．まずはこちらの手法について説明する．
+$\mathbb{B}_t^{\text{reid}}$を得るための直感的な手法は，既存手法SORTと同様に，状態変数から各スライスで検出されるBouding-Boxを予測し，それらと実際に検出されたBounding-Boxを比較し，Hungarian Algorithmなどによって対応付ける手法である．まずはこちらの手法について説明する．
 
     \subsection{SliceKalmanFilter予測によるマッチング}
     時刻$t-1$までに$\left|\mathcal{I}_{t-1}\right|$個の個体を追跡できており，それぞれの状態変数推定値$\hat{\bm{s}}_{t-1}^{(i)}$を計算済みであると仮定する（ただし$i \in \mathcal{I}_{t-1}$）．
@@ -385,3 +442,95 @@ $\mathbb{B}_t^{\text{reid}}$を得るための直感的な手法は，既存手�
     この懸念点に対応するために，SORTのような二次元空間における物体追跡情報を利用した手法を次節で提案する．
 
     \subsection{SORT+DepthSORTによるマッチング}
+    SliceKalmanFilterの観測予測による対応付けでは，一度状態変数を推定した後，その推定値をもとにBounding-Boxの位置を予測して対応付けに利用していた．しかしながら対応付けを考えるうえでは，単一スライスに着目して一時刻前のBounding-Boxを参照したり，もしくは単一時刻における上下のスライスのBounding-Boxを参照したりした方がより直感的であり，より有効である可能性がある．特に状態変数の推定の精度が低い場合には，単一スライスや単一時刻の別スライスに着目したほうが予測は安定する．
+    \par
+    以上の議論から本節では，状態推定と対応付けに利用するKalman Filterを区別し，既存手法のSORTを拡張することでより安定したBounding-Boxの予測を目指した手法を提案する．
+    \par
+    既存手法のSORTは，時刻$1$から$t-1$までの観測系列から時刻$t$のBounding-Boxを予測し，対応付けに利用していた．単一のスライスに着目すれば，ただ一つのBounding-Boxの変位及び速度そのものを推定するため，前述のSliceKalmanFilterよりも安定した予測が可能である．しかしながらこの手法のみでは，各スライスで追跡されている個体同士の対応付けができない．
+    \par
+    そこでここでは，深さ方向へSORTを適用する．すなわち時刻$t$のBounding-Box集合$\mathcal{B}_t$（式\ref{eq:input_bboxes}参照）が得られた時に，$s=1$のBounding-Box集合$\mathcal{B}_{t,s=1}$を初期時刻の入力，$s=n_s$のBounding-Box集合$\mathcal{B}_{t,s=n_s}$を終了時刻の入力とみなしたSORTを実施する．このアルゴリズムをDepthSORTと呼ぶこととする．これにより同一個体由来のBounding-Boxには同じIDが割り振られるため，個体ごとのBounding-Box集合$\mathcal{B}_t^{DS} = \left\{\left.\mathcal{B}_t^{DS, (j)}\right|j \in \mathcal{I}_t^{DS}\right\}$に分けることができる．ここで$\mathcal{I}_t^{DS}$はDepthSORTによりBounding-Boxを仕分けた際の臨時個体IDの集合を表す．このDepthSORTのアルゴリズムをアルゴリズム\ref{alg:DepthSORT}に示す．
+    \begin{algorithm}[t]
+        \caption{DepthSORT}
+        \label{alg:DepthSORT}
+        \begin{algorithmic}[1]
+            \REQUIRE $\mathcal{B}_t = \left\{\left.\mathcal{B}_{t,s}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}, \sigma_a$
+            \ENSURE $\mathcal{B}_t^{DS} = \left\{\left.\mathcal{B}_t^{DS, (j)}\right|j \in \mathcal{I}_t^{DS}\right\}$
+            \STATE $\textbf{Initialize: } \mathcal{P}_s = \emptyset, \mathcal{B}_t^{DS}=\emptyset$
+            \FOR {$\bm{o}^{(j)} \text{ in } \mathcal{B}_{t,s=1}$}
+                \STATE $\mathcal{B}_t^{DS, (j)} = \left\{\bm{o}^{(j)}\right\}$ 
+                \STATE $\mathcal{B}_t^{DS} \leftarrow \mathcal{B}_t^{DS} \cup \mathcal{B}_t^{DS, (j)}$
+            \ENDFOR
+            \FOR {$s = 2 \text{ to } n_s$}
+                \FOR {$ \mathcal{B}_t^{DS, (j)} \text{ in }\mathcal{B}_t^{DS}$}
+                    \STATE $\mathcal{P}_s \leftarrow \mathcal{P}_s \cup kalman\_predict(\mathcal{B}_t^{DS, (j)})$
+                \ENDFOR
+                \STATE $M_{s} = hungarian\_matching(\mathcal{P}_s, \mathcal{B}_{t,s})$
+                \FOR {$(i,j) \text{ in } M_s$}
+                    \STATE $\bm{o}^{(j)} = \text{GET}(\mathcal{B}_{t,s})$
+                    \STATE $\mathcal{B}_t^{DS,(i)} \leftarrow \mathcal{B}_t^{DS,(i)} \cup \bm{o}^{(j)}$
+                \ENDFOR
+                \STATE $\mathcal{B}_t^{DS} \leftarrow active\_tracks(\mathcal{B}_t^{DS}, \sigma_a)$
+            \ENDFOR
+            \RETURN $\mathcal{B}_t^{DS}$
+        \end{algorithmic}
+    \end{algorithm}
+
+    しかしDepthSORTだけでは，時刻$t-1$まで追跡してきた個体IDの集合$\mathcal{I}_{t-1}$と$\mathcal{I}_t^{DS}$は対応づいていない．そのため，最後にSORTとDepthSORTの結果を統合することでこれらのIDを対応付け，最終的な出力$\mathcal{B}_t^{\text{reid}}$を得る．
+    \par
+    ここで新たに，対応付けのための個体$i$の追跡情報を$S_t^{(i)}$と表し，これは二次元的な各スライスの状態変数推定値の集合だとする．すなわち，
+    \begin{equation}
+        \begin{aligned}
+            S_t^{(i)} &= \left\{\left.\hat{\bm{s}}_{t,s}^{(i)}\right| s \in \mathcal{S}^{\text{bbox}}_t\right\}
+        \end{aligned}
+    \end{equation}
+    と表せられる．ここで$\mathcal{S}_t^{\text{bbox}}$は，ある個体$i$が時刻$t$において検出されているスライスの集合を表す．つまり状態推定用のKalman Filterとは異なり，スライスごとに状態変数を保持している．またこの式における状態変数は三次元空間上の物理量で表されるものではなく，二次元的なBounding-Boxから得られる物理量で表されるものである．
+    \par
+    まずはこれらの各スライスの状態推定値を用いて，時刻$t$のBounding-Boxの予測$\mathcal{B}_t^{\text{pred}}$を構築する．ただしこれらは以下のようにスライスごとの状態推定値から計算される．
+    \begin{equation}
+        \begin{aligned}
+            \mathcal{B}_t^{\text{pred}} &= \left\{\left.\mathcal{B}_{t,s}^{\text{pred}}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}
+            \\ \mathcal{B}_{t,s}^{\text{pred}} &= \left\{\left.kalman\_predict(\hat{\bm{s}}_{t-1,s}^{(i)})\right|i \in \mathcal{I}_{t-1}\right\}
+        \end{aligned}
+    \end{equation}
+    ここからはSliceKalmanFilterの対応付けと同様に，スライスごとに予測と観測の対応付けを行い，IDが割り振られたBounding-Box集合$\mathcal{B}_t^{S}$を得る．
+    \par
+    最後に，DepthSORTによって得られたBounding-Box集合$\mathcal{B}_t^{DS}$とSORTによって得られたBounding-Box集合$\mathcal{B}_t^{S}$の対応付けを行い，追跡してきた個体のIDであるSORT側のIDをDepthSORTの集合へ割り当てる．ここでは$\mathcal{B}_t^{S, (i)}$と$\mathcal{B}_t^{DS, (j)}$がいくつ共通のBounding-Boxを持っているかの個数をHungarian Matchingで用いるスコア行列の$ij$成分とする．
+    以上の流れをアルゴリズム\ref{alg:SORT+DepthSORT}にまとめる．また，図\ref{fig:sort+depthsort}に本手法の概略図を示す．
+
+    \begin{algorithm}[t]
+        \caption{SORT+DepthSORT}
+        \label{alg:SORT+DepthSORT}
+        \begin{algorithmic}[1]
+            \REQUIRE $S_{t-1} = \left\{\left.S_{t-1}^{(i)}\right| i \in \mathcal{I}_{t-1}\right\}, \mathcal{B}_t = \left\{\left.\mathcal{B}_{t,s} \right| s \in \left\{1, 2, \dots, n_s\right\}\right\}$
+            \ENSURE $\mathcal{B}_t^{\text{reid}} = \left\{\left.\mathcal{O}_t^{(i)}\right|i \in \mathcal{I}_t\right\}$
+            \STATE $\textbf{Initialize: } \text{あとまわし}$
+            \FOR {$s = 1 \text{ to } n_s$}
+                \STATE $\mathcal{P}_{t,s} = \emptyset$
+                \FOR {$S_{t-1}^{(i)} \text{ in } S_{t-1}$}
+                    \STATE $\hat{\bm{s}}_{t,s}^{(i)} = \text{GET}(S_{t-1}^{(i)})$
+                    \STATE $\mathcal{P}_{t,s} \leftarrow \mathcal{P}_{t,s} \cap kalman\_predict(\hat{\bm{s}}_{t,s}^{(i)})$
+                \ENDFOR
+                \STATE $M_{t,s} = hungarian\_matching(\mathcal{P}_{t,s}, \mathcal{B}_{t,s})$
+                \FOR {$(i,j) \text{ in } M_{t,s}$}
+                    \STATE $\bm{o}_{t,s}^{(j)} = \text{GET}(\mathcal{B}_{t,s})$
+                    \STATE $\mathcal{B}_t^{S,(i)} = \left\{\bm{o}_{t,s}^{(j)}\right\} \textbf{ if } \mathcal{B}_t^{S,(i)} \text{ is undefined} \textbf{ else } \mathcal{B}_t^{S,(i)} \leftarrow \mathcal{B}_t^{S,(i)} \cap \bm{o}_{t,s}^{(j)}$
+                    \STATE $\mathcal{I}_t^{S} \leftarrow \mathcal{I}_t^{S} \cap i$
+                \ENDFOR
+                \STATE $\mathcal{B}_t^{S} = \left\{\left.\mathcal{B}_t^{S,(i)}\right|i \in \mathcal{I}_t^{S}\right\}$
+            \ENDFOR
+            \STATE $\mathcal{B}_t^{DS} = depth\_sort(\mathcal{B}_t, \sigma_a)$
+            \STATE $M_{(S,DS)} = hungarian\_matching(\mathcal{B}_t^{S}, \mathcal{B}_t^{DS})$
+            \FOR {$(i,j) \text{ in } M_{(S,DS)}$}
+                \STATE $\mathcal{O}_t^{(i)} = \mathcal{B}_t^{DS, (j)}$
+                \STATE $\mathcal{I}_t \leftarrow \mathcal{I}_t \cap i$
+            \ENDFOR
+            \RETURN $\left\{\left.\mathcal{O}_t^{(i)}\right| i \in \mathcal{I}_t\right\}$
+        \end{algorithmic}
+    \end{algorithm}
+
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{fig/sort+depthsort.pdf}
+        \caption{SORT+DepthSORTの概略図}
+        \label{fig:sort+depthsort}
+    \end{figure}
