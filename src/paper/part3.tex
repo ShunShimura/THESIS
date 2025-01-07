@@ -43,7 +43,7 @@
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{fig/yolosort.pdf}
-    \caption{YOLO+SORTの処理概要}
+    \caption[YOLO+SORTの処理概要]{YOLO+SORTの処理概要}
     \label{fig:YOLO+SORT}
 \end{figure}
 
@@ -56,9 +56,7 @@
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/yolov10_performance.pdf}
-        \caption{yoloのバージョン比較（（左）性能と推論速度（右）性能とモデルパラメータ数）}
-        \small
-        縦軸の\textrm{COCO AP}が性能，横軸の\textrm{Latency}は推論にかかる時間，\textrm{Number of Parameters}はモデルの大きさを表す．
+        \caption[yoloのバージョン比較（（左）性能と推論速度（右）性能とモデルパラメータ数）]{yoloのバージョン比較（（左）性能と推論速度（右）性能とモデルパラメータ数）: 縦軸の\textrm{COCO AP}が性能，横軸の\textrm{Latency}は推論にかかる時間，\textrm{Number of Parameters}はモデルの大きさを表す．}
         \label{fig:v10_performance}
     \end{figure}
 
@@ -89,7 +87,7 @@
     \begin{figure}[t]
         \centering    
         \includegraphics[width=\linewidth]{fig/PTandFT.pdf}
-        \caption{Pre-TrainingとFine-Tuning}
+        \caption[Pre-TrainingとFine-Tuning]{Pre-TrainingとFine-Tuning}
         \label{fig:PTandFT}
     \end{figure}
     
@@ -268,9 +266,7 @@
         \begin{figure}[t]
             \centering
             \includegraphics[width=\linewidth]{fig/sort.pdf}
-            \caption{時刻$t=4$におけるSORTの処理の概略図}
-            \small
-            SORTではBounding-Boxを観測変数として状態変数の推定を行う．このときに複数のBounding-Boxを同一個体へ割り当てるために対応付けを行う．図のように，対応付けは物体検出によって得たBouning-Boxと観測予測による予測Bouding-Box間で行う．図の例では，赤色と緑色の物体は状態更新が行われている．またどの予測Bounding-Boxとも対応づかなかったものは新しい個体として認識される（黄色）．
+            \caption[時刻$t=4$におけるSORTの処理の概略図]{時刻$t=4$におけるSORTの処理の概略図: SORTではBounding-Boxを観測変数として状態変数の推定を行う．このときに複数のBounding-Boxを同一個体へ割り当てるために対応付けを行う．図のように，対応付けは物体検出によって得たBouning-Boxと観測予測による予測Bouding-Box間で行う．図の例では，赤色と緑色の物体は状態更新が行われている．またどの予測Bounding-Boxとも対応づかなかったものは新しい個体として認識される（黄色）．}
             \label{fig:sort}
         \end{figure}
 
@@ -309,8 +305,7 @@
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/existing_problem.pdf}
-        \caption{既存手法の問題点}
-        \small
+        \caption[既存手法の問題点]{既存手法の問題点}
         \label{fig:existing_problem}
     \end{figure}
 
@@ -538,6 +533,6 @@ $\mathbb{B}_t^{\text{reid}}$を得るための直感的な手法は，既存手�
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/sort+depthsort.pdf}
-        \caption{SORT+DepthSORTの概略図}
+        \caption[SORT+DepthSORTの概略図]{SORT+DepthSORTの概略図}
         \label{fig:sort+depthsort}
     \end{figure}
