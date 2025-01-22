@@ -1,0 +1,42 @@
+\documentclass[11pt]{jsbook}
+\usepackage{../../sty/thesis}
+\usepackage{../../sty/private}
+
+\title{共焦点顕微鏡で得られた4Dデータに対する\\リアルタイム複数物体追跡}
+\author{志村　駿}
+
+\begin{document}
+    % タイトル
+    \maketitle
+    \cleardoublepage % 現在のページを終了
+    % 目次
+    \pagenumbering{roman} % 目次のページ数はローマ数字（i,ii,...）
+    \tableofcontents
+    \thispagestyle{fancy2}
+    \listoffigures % 図目次
+    \thispagestyle{fancy2}
+    \listoftables % 表目次
+    \thispagestyle{fancy2}
+    \cleardoublepage % 現在のページを終了して，次が右ページになるようにページを挿入する
+
+    \pagenumbering{arabic} % 本文のページ数はアラビア数字（1,2,...）
+
+    \chapter{はじめに}
+    \input{src/thesis/part1.tex}
+
+    \chapter{問題設定}
+    \input{src/thesis/part2_v3.tex}
+
+    \chapter{提案手法}
+    \input{src/thesis/part3_v3.tex}
+
+    \chapter{計算機実験}
+    \input{src/thesis/part4_v2.tex}
+
+    \chapter{おわりに}
+    \input{src/thesis/part5.tex}
+
+    \bibliographystyle{ieeetr}
+    \bibliography{}
+
+\end{document}

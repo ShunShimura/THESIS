@@ -1,40 +1,24 @@
-\documentclass[11pt]{jsbook}
-\usepackage{../../sty/thesis}
-\usepackage{../../sty/private}
+\documentclass[twoside,twocolumn,10pt]{jarticle}
+\usepackage{../../sty/paper}
 
-\title{共焦点顕微鏡で得られた4Dデータに対する\\リアルタイム複数物体追跡}
-\author{志村　駿}
+\title{共焦点顕微鏡で得られた4Dデータに対するリアルタイム複数物体追跡}
+\author{\begin{tabular}{lll}
+        名古屋大学 & 志村駿 & SHIMURA Shun \\ 
+        \end{tabular}}
+\date{}
 
 \begin{document}
-    % タイトル
     \maketitle
-    \cleardoublepage % 現在のページを終了
-    % 目次
-    \pagenumbering{roman} % 目次のページ数はローマ数字（i,ii,...）
-    \tableofcontents
-    \thispagestyle{fancy2}
-    \listoffigures % 図目次
-    \thispagestyle{fancy2}
-    \listoftables % 表目次
-    \thispagestyle{fancy2}
-    \cleardoublepage % 現在のページを終了して，次が右ページになるようにページを挿入する
 
-    \pagenumbering{arabic} % 本文のページ数はアラビア数字（1,2,...）
+    \input{src/paper/sec1.tex}
 
-    \chapter{はじめに}
-    \input{src/paper/part1.tex}
+    \input{src/paper/sec2.tex}
 
-    \chapter{問題設定}
-    \input{src/paper/part2_v3.tex}
+    \input{src/paper/sec3.tex}
 
-    \chapter{提案手法}
-    \input{src/paper/part3_v3.tex}
+    \input{src/paper/sec4.tex}
 
-    \chapter{計算機実験}
-    \input{src/paper/part4.tex}
-
-    \chapter{おわりに}
-    \input{src/paper/part5.tex}
+    \nocite{*}
 
     \bibliographystyle{ieeetr}
     \bibliography{}
