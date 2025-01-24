@@ -24,7 +24,7 @@
     \item デモデータの生成ではランダムな加速度を与えているため，物体が対象領域$\Omega$を出てしまうことも考えられる．すると速度範囲を変えた際などに平等な評価を行うことが困難になるため，領域を出てしまった時点でその分の新しい物体の生成を行う．この生成方法は手順1と同様である．物体のすべての領域が対象領域$\Omega$と共通部分を持たなくなったら領域を出たと判断する．
 \end{enumerate}
 
-以降の実験では特記しない限り，$v_{\text{range}} = 0.1$，$r_{\text{min}} = 5$ ，$r_{\text{max}} = 10$，$\sigma_{\text{noise}} = 0.01$，$t_c = 1$，$n_s = 101$を基準のデモデータとして使用する．
+以降の実験では特記しない限り，$n_b = 10$，$v_{\text{range}} = 0.1$，$r_{\text{min}} = 5$ ，$r_{\text{max}} = 10$，$\sigma_{\text{noise}} = 0.01$，$t_c = 1$，$n_s = 101$を基準のデモデータとして使用する．
 
 \section{ReIDと状態推定のパイプライン評価}
 \label{sec:pipeline}
@@ -36,43 +36,70 @@
     \subsection{パイプライン評価}
     \label{subsec:pipeline_evaluation}
 
-    \subsubsection{実装詳細}
-    パイプライン評価では表\ref{tab:reidentification_methods}に示す四つの手法を評価する．時間方向の追跡を打ち切る閾値は$\sigma_{\text{sort-act}} = 3$，空間方向の追跡を打ち切る閾値は$\sigma_{\text{d-sort-act}} = 1$とした．またすべてのカルマンフィルタにおいて，システムノイズ分散は$100$，
-    観測ノイズの大きさは$1.0$，初期時刻における推定状態分散は$\Sigma_0 = 100 * I_n$とする．ここでの$n$は状態変数の長さであり$I_n$は$n$次の単位行列である．また動作環境は，OSがUnuntu 20.04.6 LTS（Focal Fossa）であり，CPUがIntel(R) Xeon(R) Gold 6338 CPU @ 2.00GHzの32コアである．
+        \subsubsection{実装詳細}
+        パイプライン評価では表\ref{tab:reidentification_methods}に示す四つの手法を評価する．時間方向の追跡を打ち切る閾値は$\sigma_{\text{sort-act}} = 3$，空間方向の追跡を打ち切る閾値は$\sigma_{\text{d-sort-act}} = 1$とした．またすべてのカルマンフィルタにおいて，システムノイズ分散は$100$，
+        観測ノイズの大きさは$1.0$，初期時刻における推定状態分散は$\Sigma_0 = 100 * I_n$とする．ここでの$n$は状態変数の長さであり$I_n$は$n$次の単位行列である．また動作環境は，OSがUnuntu 20.04.6 LTS（Focal Fossa）であり，CPUがIntel(R) Xeon(R) Gold 6338 CPU @ 2.00GHzの32コアである．
 
-    \subsubsection{比較手法}
-    本実験ではReIDに\ref{sec:existing_method}で説明したSORTと外観情報を用いずに高精度なReIDを達成するByteTrackを適用したものを比較手法として評価する．これらの比較手法は単一のスライスにしか適用できないため，各スライスで追跡される情報を独立したものとしてReIDの結果を得る．またこれらの比較手法では，単純な状態推定を行う．すなわち，単一のスライス$s$におけるバウンディングボックスの軌跡から予測された時刻$t + 1$のバウンディングボックスが，$[x, y, w, h]$で表されるとき，時刻$t+1$の状態推定値$\bm{s}_{t+1}^{\text{pred}}$を，
-    \begin{equation}
-        \label{eq:naive_state_estimation}
-        \bm{s}^{\text{pred}}_{t+1} = \left[x,~ 0,~ y,~ 0,~ s \delta z,~ 0,~ \frac{\max(w, h)}{2}\right]
-    \end{equation}
-    として得る．すなわち物体の中心がそのスライス上かつバウンディングボックスの中心に一致し，そのバウンディングボックスが球体の半径を用いて表せられる円に外接しているとして推定している．
-    
-    \subsubsection{評価指標}
-    
-    ReIDの状態推定を組み合わせたパイプラインの出力は，時刻$t$において追跡している各物体$i \in \mathcal{I}_t$の時刻$t+1$の状態推定$\bm{s}_{t+1}$である．この状態推定値の推定精度を評価するために，三次元空間における予測球体と正解ラベル球体の共通領域度合いを示すIoUの平均値（以後meanIoUと呼ぶ）を用いる．ある二つの球体$\bm{s}_1 = [x_1, y_1, z_1, r_1]$と$\bm{s}_2 = [x_2, y_2, z_2, r_2]$が存在するとき，IoU$(\bm{s}_1, \bm{s}_2)$は，
-    \begin{equation}
-        \label{eq:sphere_iou}
-        \begin{aligned}
-            d &= \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2 + (z_1 - z_2)^2}
-            \\V_{\text{inter}} &= \left\{
-                \begin{aligned}
-                    &\frac{\pi}{12 d} \left\{d - (r_1 + r_2)\right\}^2 \left\{d^2 + 2(r_1 + r_2)d - 3 (r_1 - r_2)^2\right\},& \quad &\textbf{if } d < r_1 + r_2
-                    \\ & 0,& &\textbf{else} 
-                \end{aligned}
-            \right.
-            \\\text{IoU}(\bm{s}_1, \bm{s}_2) &= \frac{V_{\text{inter}}}{\frac{4}{3}\pi r_1^2 + \frac{4}{3}\pi r_2^2 - V_{\text{inter}}}
-        \end{aligned}
-    \end{equation}
-    で表される．
+        \subsubsection{比較手法}
+        本実験ではReIDに\ref{sec:existing_method}で説明したSORTと外観情報を用いずに高精度なReIDを達成するByteTrack\cite{zhang2022bytetrack}を適用したものを比較手法として評価する．これらの比較手法は単一のスライスにしか適用できないため，各スライスで追跡される情報を独立したものとしてReIDの結果を得る．またこれらの比較手法では，単純な状態推定を行う．すなわち，単一のスライス$s$におけるバウンディングボックスの軌跡から予測された時刻$t + 1$のバウンディングボックスが，$[x, y, w, h]$で表されるとき，時刻$t+1$の状態推定値$\bm{s}_{t+1}^{\text{pred}}$を，
+        \begin{equation}
+            \label{eq:naive_state_estimation}
+            \bm{s}^{\text{pred}}_{t+1} = \left[x,~ 0,~ y,~ 0,~ s \delta z,~ 0,~ \frac{\max(w, h)}{2}\right]
+        \end{equation}
+        として得る．すなわち物体の中心がそのスライス上かつバウンディングボックスの中心に一致し，そのバウンディングボックスが球体の半径を用いて表せられる円に外接しているとして推定している．
+        
+        \subsubsection{評価指標}
+        
+        ReIDの状態推定を組み合わせたパイプラインの出力は，時刻$t$において追跡している各物体$i \in \mathcal{I}_t$の時刻$t+1$の状態推定$\bm{s}_{t+1}$である．この状態推定値の推定精度を評価するために，三次元空間における予測球体と正解ラベル球体の共通領域度合いを示すIoUの平均値（以後meanIoUと呼ぶ）を用いる．ある二つの球体$\bm{s}_1 = [x_1, y_1, z_1, r_1]$と$\bm{s}_2 = [x_2, y_2, z_2, r_2]$が存在するとき，IoU$(\bm{s}_1, \bm{s}_2)$は，
+        \begin{equation}
+            \label{eq:sphere_iou}
+            \begin{aligned}
+                d &= \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2 + (z_1 - z_2)^2}
+                \\V_{\text{inter}} &= \left\{
+                    \begin{aligned}
+                        &\frac{\pi}{12 d} \left\{d - (r_1 + r_2)\right\}^2 \left\{d^2 + 2(r_1 + r_2)d - 3 (r_1 - r_2)^2\right\},& \quad &\textbf{if } d < r_1 + r_2
+                        \\ & 0,& &\textbf{else} 
+                    \end{aligned}
+                \right.
+                \\\text{IoU}(\bm{s}_1, \bm{s}_2) &= \frac{V_{\text{inter}}}{\frac{4}{3}\pi r_1^2 + \frac{4}{3}\pi r_2^2 - V_{\text{inter}}}
+            \end{aligned}
+        \end{equation}
+        で表される．
 
-    meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算し，これらの平均値を取る．また評価の際には，予測されたある球体が正解ラベルの球体におけるどの球体に対応する予測なのかを知ることができない．よって評価の際にはスコアであるmeanIoUが最大になるようにこの対応付けを行う．すなわち$f_{\text{sim}}$をIoUとしたアルゴリズム\ref{alg:hungarian_matching}を利用する．
+        meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算し，これらの平均値を取る．また評価の際には，予測されたある球体が正解ラベルの球体におけるどの球体に対応する予測なのかを知ることができない．よって評価の際にはスコアであるmeanIoUが最大になるようにこの対応付けを行う．すなわち$f_{\text{sim}}$をIoUとしたアルゴリズム\ref{alg:hungarian_matching}を利用する．
 
-    \subsubsection{結果}
-    
+        \subsubsection{結果}
+
+        \begin{figure}[t]
+            \begin{subfigure}[b]{0.5\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/meanIoUs.pdf}
+                % \caption[パイプライン評価におけるmeanIoU比較]{パイプライン評価におけるmeanIoU比較：提案手法の詳細については表\ref{tab:reidentification_methods}を参照されたい．}
+                \label{fig:meanIoU_pipeline}
+            \end{subfigure}
+            \hfill
+            \begin{subfigure}[b]{0.5\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/prediction_count.pdf} 
+                \label{fig:prediction_count}
+            \end{subfigure}
+            \vspace{-3zh}
+            \caption[パイプラインにおける既存手法との比較評価]{パイプラインにおける既存手法との比較評価：実線が提案手法，点線が既存手法による結果を示す．（左）meanIoUは予測球体と正解ラベル球体の重なり具合を示し，最大が$1.0$である．（右）縦軸が予測された追跡対象の個数を表す．既存手法ではスライスで分割された分かなり冗長な予測がされている．}
+            \label{fig:pipeline_assessment}
+        \end{figure}
+        
+        図\ref{fig:pipeline_assessment}に結果を示すように，すべての時刻において四つすべての提案手法が既存手法の精度を上回っている．この結果では予測された球体のうち，IoU$ > 0$のもののみを換算しているため，予測の精度が良いものに限定しても提案手法の予測精度が大きく既存手法を上回っていると言える．また図\ref{fig:pipeline_assessment}（右）では，既存手法の予測数が提案手法に比較してかなり冗長であることを示している．これはスライスごとに予測を行っているためと考えられる．これは実際に追跡による予測を参考にする際に，どれを選択すればよいか判断しづらいという問題に発展してしまう．一方で提案手法では$n_b$である$10$付近に予測数を抑えられていることが分かる．
 
     \subsection{ReID手法単体の評価}
     \label{subsec:evaluate_reidentification}
+
+    図\ref{fig:pipeline_assessment}では四つの提案手法の精度の違いが確認された．そこでこの節では，パイプラインではなくReID単体の評価を行うことでこれらの違いの原因を究明する．まずはじめに，MOTの評価指標にしばしば用いられるAssociation-Accuracy（以後AssA）を用いて，これらの原因がパイプライン後半のSliceKalmanFilterのみではなくReID手法にもあることを示す．そしてこれらの違いを，Detection-Mapという新たな評価方法によって議論する．
+
+        \subsubsection{評価指標}
+        
+
+
+        \subsubsection{結果}
 
     \subsection{状態推定手法単体の評価}
     \label{subsec:evaluate_estimation}
