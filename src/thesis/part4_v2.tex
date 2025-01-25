@@ -90,19 +90,51 @@
         
         図\ref{fig:pipeline_assessment}に結果を示すように，すべての時刻において四つすべての提案手法が既存手法の精度を上回っている．この結果では予測された球体のうち，IoU$ > 0$のもののみを換算しているため，予測の精度が良いものに限定しても提案手法の予測精度が大きく既存手法を上回っていると言える．また図\ref{fig:pipeline_assessment}（右）では，既存手法の予測数が提案手法に比較してかなり冗長であることを示している．これはスライスごとに予測を行っているためと考えられる．これは実際に追跡による予測を参考にする際に，どれを選択すればよいか判断しづらいという問題に発展してしまう．一方で提案手法では$n_b$である$10$付近に予測数を抑えられていることが分かる．
 
+    \subsection{状態推定手法単体の評価}
+    \label{subsec:evaluate_estimation}
+
+
     \subsection{ReID手法単体の評価}
     \label{subsec:evaluate_reidentification}
 
-    図\ref{fig:pipeline_assessment}では四つの提案手法の精度の違いが確認された．そこでこの節では，パイプラインではなくReID単体の評価を行うことでこれらの違いの原因を究明する．まずはじめに，MOTの評価指標にしばしば用いられるAssociation-Accuracy（以後AssA）を用いて，これらの原因がパイプライン後半のSliceKalmanFilterのみではなくReID手法にもあることを示す．そしてこれらの違いを，Detection-Mapという新たな評価方法によって議論する．
+    図\ref{fig:pipeline_assessment}では四つの提案手法の精度の違いが確認された．そこでこの節では，パイプラインではなくReID単体の評価を行うことでこれらの違いの原因を究明する．まずはじめに，MOTの評価指標にしばしば用いられるAssociation-Accuracyを用いて，これらの原因がパイプライン後半のSliceKalmanFilterのみではなくReID手法にもあることを示す．そしてこれらの違いを，Detection-Mapという新たな評価方法によって議論する．
 
         \subsubsection{評価指標}
         
+        MOTにおける潜在的なエラーは，検出の可否，IDの振り違い，そして検出位置のズレの三つで構成される．HOTA\cite{luiten2021hota}はこれらをすべて加味したMOTの評価指標でありながら，どうじに上記三つのエラーに項を分解することができる評価指標でもある．これらの分解された評価指標は順に，Detection-Accuracy，Association-Accuracy，Localization-Accuracy（以後DetA，AssA，LocAと呼ぶ）と呼ばれる．
 
+        本節における実験では理想的な物体検出を想定しているため，DetAに興味がない．よって以降ではHOTAを構成する評価指標のうち，Association-Accuracyのみを評価指標として用いる．Association-Accuracyの数値の最大値は$1.0$であり，その値は，``追跡された一つのIDを持つ軌跡と正解ラベルにおける一つのIDを持つ軌跡を比較した時に，軌跡がどれだけ一致しているか''を，すべての軌跡における検出位置について平均化したものである．また，追跡における軌跡のある検出位置と正解ラベルにおける軌跡のある検出位置の対応付けはHOTAが最大になるように決まる．詳細については原論文\cite{luiten2021hota}を参照されたい．
+
+        また詳細なReIDの評価を行うために，Detection-Mapという評価指標を用いる．Detection-Mapでは，追跡を行った各IDの物体に対して，そのIDを振られたバウンディングボックスが（時刻$t$とスライス$s$で特徴づけられる）どの画像で検出されたものであるのかを示す．これを確認することにより，物体をどう追跡しているのかをReIDと状態推定とで分けて可視化することができる．
 
         \subsubsection{結果}
 
-    \subsection{状態推定手法単体の評価}
-    \label{subsec:evaluate_estimation}
+        \begin{table}[t]
+            \centering
+            \caption[ReIDにおける提案手法の比較]{ReIDにおける提案手法の比較：太字は最良値を示している．}
+            \label{tab:reid_evaulation_assa}
+            \begin{tabular}{l|ccc}
+                Methods & \# Predictions & IDF1 & AssA
+                \\ \hline \hline
+                only SORT & $49$ & $0.51$ & $0.43$
+                \\ only SKF & $35$ & $0.97$ & $0.95$
+                \\ SORT + DepthSORT & $33$ & $\bm{0.99}$ & $\bm{0.99}$
+                \\ SKF + DepthSORT & $52$ & $0.96$ & $0.93$
+            \end{tabular}
+        \end{table}
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=\linewidth]{fig/detection_maps.pdf}
+            \caption[ReID手法のDetection-Mapの一部]{ReID手法のDetection-Mapの一部：SORT+DepthSORT（左上）ではほとんどのIDが安定した追跡を行えている．一方SORTの代わりにSKFの予測を用いたReID（右上）では，一部図に示すような追跡の分裂が見られた．またSKFのみを用いた場合（左下）では，DepthSORTなしでもほとんどの追跡を行えていることがわかる．最後にDepthSORTもSKFも行わない場合は，他のスライスへの追跡が行えていないことが図からも読み取れる．}
+            \label{fig:detection_maps}
+        \end{figure}
+
+        表\ref{tab:reid_evaulation_assa}および図\ref{fig:detection_maps}に結果を示す．SORTによる時間方向の対応付けしか実施しない場合は，図\ref{fig:detection_maps}の右下に示すように他のスライスへ追跡を拡張できずに精度が下がってしまうことが分かる．一方DepthSORTによるReIDを行った場合は他のスライスを考慮でき，図\ref{fig:detection_maps}左上に示すように安定した追跡を行っている（ただし図右上ではうまくReIDをできていない例を示しており，大部分は左上と同じような結果であることに注意されたい）．
+
+        一方SKFの予測による対応付け手法では，DepthSORTを用いずにスライス方向への対応付けを可能にしている．これはカルマンフィルタによって速度を推定し，ほかのスライスへの予測を行えているためである．しかしながら図の左下に着目すると，図の左上と比較して部分的に見逃している検出バウンディングボックスがあることが分かる．これはカルマンフィルタの予測精度に起因すると考えられるため，次節で議論する．
+
+        またSKFによる対応付けをもとにDepthSORTを利用した手法（図右上）では，ほとんどの結果がSORT+DepthSORTと同じ結果でありながら，一部図右上に示すような追跡の分裂が確認された．これについてもSKFの予測精度が関わってくるため，次節で議論する．
 
 \section{スライス数の変化に対する評価}
 \label{sec:number_of_slice}
