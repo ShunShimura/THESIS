@@ -171,8 +171,134 @@
 \section{スライス数の変化に対する評価}
 \label{sec:number_of_slice}
 
+\ref{sec:setting}では，対象空間を何枚のスライスで捉えるのかを$n_s$で表し，この$n_s$の値によってフレーム間隔とスライス間隔のトレードオフが生じることを説明した．よって本節では，このスライス枚数$n_s$を変化させたときに追跡精度meanIoUにどのような影響を及ぼすのかを検証する．評価方法は，前節で用いたものを引き続き利用する．また提案手法のうちonly SORTは高精度が望まれないことが自明であるため，本節では実験の対象から除外する．
+
+    \subsubsection{データセット}
+
+    \begin{table}[t]
+        \centering
+        \caption[スライス数変化の評価実験におけるデータセット]{スライス数変化の評価実験におけるデータセット：$t_c = 1.0$として計算している．}
+        \label{tab:ns_exp_detail}
+        \begin{tabular}{c|ccc}
+            スライス数$n_s$ & 離散的な時間長さ & フレーム間隔$dt$ & スライス間隔$\delta z$ 
+            \\ \hline \hline
+            $11$ & $927$ & $11.0$ & $10.0$
+            \\ $21$ & $485$ & $21.0$ & $5.0$
+            \\ $51$ & $200$ & $51.0$ & $2.0$
+            \\ $101$ & $101$ & $101.0$ & $1.0$
+            \\ $201$ & $50$ & $201.0$ & $0.5$
+        \end{tabular}
+    \end{table}
+
+    二次元画像一枚の取得にかかる連続時間は一定のため，対象とする離散時間長さを一定にすると対象とする連続時間長さが変わってしまう．そこで本実験では，取得する画像数を$101 \times 101 = 10201$に固定し，これをそれぞれの$n_s$で割った余りを離散的な時間長さとしてデモデータを作成する．この詳細を表\ref{tab:ns_exp_detail}に示す．
+
+    \subsubsection{結果}
+
+    \begin{figure}[t]
+        \begin{subfigure}[b]{\linewidth}
+            \centering
+            \includegraphics[width=\linewidth]{fig/meaniou_each_ns.pdf}
+            \caption[各$n_s$ごとの追跡精度評価]{各$n_s$ごとの追跡精度評価：各色のプロットが三つの提案手法に対応している．また横軸のStepは離散的な時刻を表すため，$n_s$ごとに上端が異なっている．}
+            \label{fig:meaniou_each_ns}
+        \end{subfigure}
+        \\
+        \begin{subfigure}[b]{0.32\linewidth}
+            \centering
+            \includegraphics[width=\linewidth]{fig/ns_exp/meanIoUs_GTs.pdf}
+            \caption[理想的なReIDを用いた場合の$n_s$の影響]{理想的なReIDを用いた場合の$n_s$の影響}
+            \label{fig:ideal_reid_ns_effect}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[b]{0.32\linewidth}
+            \centering
+            \includegraphics[width=\linewidth]{fig/ns_exp/Assa_ns.pdf}
+            \caption[各提案手法におけるAssAに対する$n_s$の影響]{各提案手法におけるAssAに対する$n_s$の影響}
+            \label{fig:ns_effect_on_assa}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[b]{0.32\linewidth}
+            \centering
+            \includegraphics[width=\linewidth]{fig/ns_exp/IDSW_ns.pdf}
+            \caption[各提案手法におけるIDSWに対する$n_s$の影響]{各提案手法におけるIDSWに対する$n_s$の影響}
+            \label{fig:ns_effect_on_idsw}
+        \end{subfigure}
+        \caption[スライス数$n_s$を変えた場合の状態推定精度の影響]{スライス数$n_s$を変えた場合の状態推定精度の影響}
+        \label{fig:ns_effect}
+    \end{figure}
+
+    図\ref{fig:ns_effect}に結果を示す．まず図\ref{fig:meaniou_each_ns}に着目すると，スライス数$n_s$を上げ続けると状態推定精度が落ちる傾向にある．これは図\ref{fig:ns_effect_on_assa}および\ref{fig:ns_effect_on_idsw}に示すようにIDSWが増えずにAssAのみ下がっているため，ある単一の個体に由来するバウンディングボックスが，いくつかの別個体として認識されていることが分かる．これはおそらく，$n_s$が大きくなったことでフレーム間隔$dt$が大きくなり，時間方向の対応付けが困難になってしまったためと考えられる．
+
+    また$n_s = 11$では反対に，すべての提案手法における精度の低下が確認された．図\ref{fig:ns_effect_on_assa}および図\ref{fig:ns_effect_on_idsw}からReIDの精度が急激に低下していることが分かり，これが状態推定精度に起因していると考えられる．またスライス間隔$\delta z$および球体のサイズ$r_{\text{max}}$，$r_{\text{min}}$を比較しても，$r_{\text{max}} = \delta z$であるので，明らかに検出されるバウンディングボックスが少ないことが自明であり，これがReIDの低精度の原因と考えられる．
+
+    特筆するべき点は，$n_s = 21 \sim 201$においてReIDの精度が大きく向上していないにもかかわらず，図\ref{fig:ideal_reid_ns_effect}に示すように$n_s$を下げるにつれ状態推定の精度が上がっていることである．これはすなわち，SliceKalmanFilterを推定に利用すれば，スライス間隔が少なくとも対象物体の最小サイズより小さい場合，それ以上は時間間隔を狭めればよい，と結論づけられることを示している．
+
 \section{細胞に対する物体検出の評価}
 \label{sec:cell_detection}
 
+ここまでの章では，理想的な物体検出を行ったとして検証データを用いてReIDおよび状態推定を評価してきた．しかしながら実際の物体検出では誤検出や見逃しがあり，それらは後続のReID，状態推定に影響を及ぼすはずである．よってまずはこの章では，実際の共焦点顕微鏡から得られた細胞に対するデータを用い，物体検出の評価を行う．
+
+    \subsubsection{実装詳細}
+
+    本実験では，物体検出モデルとしてYOLOv10の六つのサイズ（N/S/M/B/L/X）で評価を行う（原論文\cite{wang2024yolov10}のTable1参照）．また微調整（Fine-Tuning）には，共焦点顕微鏡から得られた$865$枚の画像にアノテーションを実施し，そのうち$692$枚を学習データ，残りの$173$枚を検証データとした．微調整のハイパーパラメータについてはYOLOv10の原論文\cite{wang2024yolov10}のTable14と同様である．またクラス数は，遊離した細胞の一つのみに設定した．
+
+    \subsubsection{評価指標}
+
+    本実験では，評価指標として誤検出を示すFalse Positive（FP）と見逃しを示すFalse Negative（FN），そしてそれらと正解を示すTrue Positive（TP）から算出されるF1scoreを用いる．しかしながら物体検出におけるこれらは少し複雑性を伴うため，以下に説明を述べる．
+
+    一般的な混同行列の成分（TP，FP，FN，TN）は，各インスタンス（例えば画像分類であれば各画像を指す）に対して，予測ラベルが正解ラベルと一致しているかどうかで計上される．しかしながら物体検出では，どの予測バウンディングボックスが正解ラベルのバウンディングボックスと対応づいているかが非自明なため，一貫性のある対応付けが必要である．
+
+    そこで物体検出における混同行列の算出では，各正解ラベルのバウンディングボックスそれぞれについて，IoUがある閾値以上であり，その中で正解ラベルのクラスに属する予測クラス確率が最も高いものがその予測として対応付けられる．ただしある予測バウンディングボックスが二つ以上の正解ラベルのバウンディングボックスに対して最大値のクラス確率をもつ場合，IoUが高いほうが優先され，もう片方には次点の予測バウンディングボックスが対応付けられる．またこのIoUの閾値は通常$0.5$に設定される．
+
+    この対応付けが行われた後，対応付けがあった予測バウンディングボックスをTP，対応付けがなかった予測バウンディングボックスをFP，また対応付けがなかった正解ラベルのバウンディングボックスをFNとする．また物体検出において物体でない領域は無限個定義できてしまうため，TNは算出されない．
+
+    これらの混同行列の成分を用いてF1scoreは，
+    \begin{equation}
+        \label{eq:f1_score}
+        \begin{aligned}
+            &F1 = \frac{2 p\cdot r}{p + r},
+            \\ &\textbf{where} \quad p = \frac{TP}{TP + FP}, ~ r = \frac{TP}{TP + FN}
+        \end{aligned}
+    \end{equation}
+    で表される．ここで$p$は精度（precision），$r$は再現率（recall）と呼ばれ，精度は検出したもののうちどれだけ正解が含まれていたか，再現率は正解であるものをどれだけ検出することができたかを示す評価指標でもある．またこれらの値は，\ref{subsubsec:yolo_components}で説明したように信頼度の閾値によって変化することに注意されたい．
+
 \section{物体検出のFPとFNが与える効果および対処}
 \label{sec:covering_detection}
+
+    前章では，実際の物体を対象とした複数物体追跡では，物体検出において十分に誤検出や見逃しが生じうることを確認した．そこで本章では，その誤検出や見逃しが後続の複数物体追跡にどのような影響を与え，またどのように対処するべきかを評価・検証する．
+
+    \subsection{物体検出のFNの影響と対処}
+    \label{subsec:false_negative_effect}
+
+    まずは問題を切り分け，見逃し（FN）が複数物体追跡に及ぼす影響を評価する．本節では，検証用データの作成手順4において，見逃す確率をドロップアウト率$r_{d} \in [0, 1]$と定め，その確率でバウンディングボックスの正解ラベルを削除する．そしてこの削除されたバウンディングボックスを物体検出後の入力としてReIDおよび状態推定を評価する．
+
+    \subsection{結果}
+
+    \begin{figure}[t]
+        \centering
+        \begin{subfigure}[b]{\linewidth}
+            \centering
+            \includegraphics[width=\linewidth]{fig/FN_effect.pdf}
+            \caption[物体検出のFNによる状態推定と追跡物体数の変化]{物体検出のFNによる状態推定と追跡物体数の変化}
+            \label{fig:FN_effect}
+        \end{subfigure}
+        \\
+        \begin{subfigure}[t]{0.6\linewidth}
+            \centering
+            \includegraphics[width=\linewidth]{fig/depth_thres_covering.pdf}
+            \caption[深さ方向の打ち切り閾値による状態推定の改善]{深さ方向の打ち切り閾値による状態推定の改善}
+            \label{fig:depth_thres_covering}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[t]{0.3\linewidth}
+            \centering
+            \includegraphics[width=\linewidth]{fig/AssA_dropout0.5_with_thres.pdf}
+            \caption[深さ方向の打ち切り閾値とReID精度の関係]{深さ方向の打ち切り閾値とReID精度の関係}
+            \label{fig:AssA_with_thres}
+        \end{subfigure}
+        \caption[物体検出のFNがMOTに与える効果]{物体検出のFNがMOTに与える効果：}
+        \label{fig:MOT_detectionFN}
+    \end{figure}
+
+    まず物体検出のFNが状態推定精度に与える影響を図\ref{fig:FN_effect}に示す．まずReIDにSliceKalmanFilterのみを用いた場合は，精度および予測される物体数も安定し，影響を受けないことが分かる．一方でDepthSORTを用いる他の二つの手法は検出抜けの割合$r_d$に応じて精度が悪化している．これはDepthSORTを行う際に，追跡をやめる打ち切り閾値を$1$に設定したことが起因し，追跡が途切れたことが原因と考える．実際に予測されている物体数を数えると，$r_d$が増える程その予測数も多くなり，DepthSORTの軌跡の分裂がひとつの大きな要因として考えられる．
+
+    よってその打ち切り閾値を変化させた場合の結果が図\ref{fig:depth_thres_covering}である．各色のプロットがその打ち切り閾値に対応しており，閾値を大きくすることである程度の改善が見られていることが分かる．ただし図\ref{fig:AssA_with_thres}に着目すると，この改善もある閾値で頭打ちになる．これはおそらく，閾値を大きくしたことによって今度は他の個体由来のバウンディングボックスが対応付けられるようになってしまったことが要因として考えられる．
