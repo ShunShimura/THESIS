@@ -1,0 +1,32 @@
+% package =================================================%
+\usepackage[dvipdfmx]{graphicx}
+\usepackage{flushend} % 各段組の行の位置を揃える
+%=========================================================%
+
+% title ==================================================%
+\newcommand{\type}[1]{\gdef\@type{#1}} % 文書種類
+\newcommand{\university}[1]{\gdef\@university{#1}} % 大学名
+\newcommand{\department}[1]{\gdef\@department{#1}} % 学部名
+\newcommand{\course}[1]{\gdef\@course{#1}} % 所属専攻
+\newcommand{\chair}[1]{\gdef\@chair{#1}} % 所属グループ
+\newcommand{\grade}[1]{\gdef\@grade{#1}} % 学年
+\newcommand{\studentidnumber}[1]{\gdef\@studentidnumber{#1}} % 学籍番号
+\newcommand{\enauthor}[1]{\gdef\@enauthor{#1}} % 名前（英語ver.）
+\newcommand{\supervisor}[1]{\gdef\@supervisor{#1}} % 指導教官
+%=========================================================%
+
+% parameters =============================================%
+\usepackage[top=20truemm,bottom=25truemm,left=20truemm,right=20truemm]{geometry} % 余白
+\setlength{\columnsep}{7truemm} % 二段組中央
+\setlength{\baselineskip}{14pt} % 行間
+%=========================================================%
+
+% section ================================================%
+\usepackage[T1]{fontenc}
+\makeatletter
+\renewcommand{\section}{
+    \@startsection{section}{1}{0mm}{\baselineskip}{0.5\baselineskip}
+    {\fontsize{12}{12}\rmfamily}
+}
+\makeatother
+%=========================================================%

@@ -261,6 +261,19 @@
     \end{equation}
     で表される．ここで$p$は精度（precision），$r$は再現率（recall）と呼ばれ，精度は検出したもののうちどれだけ正解が含まれていたか，再現率は正解であるものをどれだけ検出することができたかを示す評価指標でもある．またこれらの値は，\ref{subsubsec:yolo_components}で説明したように信頼度の閾値によって変化することに注意されたい．
 
+    \subsubsection{結果}
+
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=\linewidth]{fig/yolo_f1score.pdf}
+        \caption[細胞に対する物体検出評価]{細胞に対する物体検出評価}
+        \label{fig:yolo_f1score}
+    \end{figure}
+
+    図\ref{fig:yolo_f1score}に結果を示す．モデルサイズの違いに着目すると，最もサイズの大きいXではそれより小さいモデルよりもF1scoreの最大値が小さくなっていることが分かる．これはおそらくモデルサイズに比べてデータセットサイズが小さく，過学習を起こしていると考えられる．
+
+    これらの図より，f1scoreの最大値は$0.8$付近であり，信頼度の閾値は$0.2$付近が良いと判断される．すなわち，少なくともFPおよびFNは二割以上発生すると想定して複数物体追跡を行うことが望まれる．
+
 \section{物体検出のFPとFNが与える効果および対処}
 \label{sec:covering_detection}
 
