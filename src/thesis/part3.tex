@@ -1,306 +1,413 @@
 \thispagestyle{fancy2}
 
-画像の時系列データを入力として，オンライン処理で複数の物体を追跡する問題は，複数物体追跡（Multi-Object Tracking; MOT）と呼ばれ，\cite{luo2021multiple}，防犯カメラに映る歩行者や自動車の追跡など，広く利用されている．しかしながらこれらの手法のほとんどは，一時刻に画像が一枚入力される３次元データにしか対応していない．特に，本問題設定のように３次元の空間情報が複数のスライス画像で与えられる４次元データにそのまま適用できる手法は未だ開発されていない．
-\par
-よってこの章では，新たに本問題設定のような問題に適用できるような手法を提案する．また提案手法の基盤として，一般的な複数物体追跡問題にしばしば利用されるYOLO+SORT\cite{redmon2016you,alif2024yolov1,bewley2016simple}を説明する．
+第三部では，既存手法であるTracking-by-Detectionの手法を基盤として本問題設定のような三次元スライス画像に適応するような拡張を行う．またTracking-by-Detectionの手法として，最もシンプルな手法の構成要素である，物体検出を行うYOLOと対応付けを行うSORTのアーキテクチャおよびアルゴリズムを述べる．そしてそこで説明されるハンガリー法による対応付けとカルマンフィルタの拡張版，拡張カルマンフィルタを利用した提案手法の説明を行う．
 
-\section{既存手法と問題点}
-既存手法が対象にしている問題設定では，前述の通り一時刻の入力が画像一枚である．またYOLO+SORTでは，物体の情報をBounding-Boxと呼ばれる矩形情報$\left[x, y, w, h\right]$で表現する．ここで$(x,y)$は画像における物体の位置，$w$は物体の幅，$h$は物体の高さである．よって推定される物体の状態変数$\bm{s}_t$は，このBounding-Boxの持つ変数及びそれらの時間微分で与えられる．
-\par
-以上の議論から，既存手法が対象にしている問題における，時刻$t$の入力データ$\mathcal{X}_t$は，
+\section{Tracking-by-Detectionの既存手法と適用上の問題点}
+\label{sec:existing_method}
 
-\begin{equation}
-    \mathcal{X}_t \in \mathbb{R}^{W \times H \times 3}
-\end{equation}
-で表せられ，物体の状態変数$\bm{s}_t$は，
+Tracking-by-Detectionでは，毎時刻に得られるデータをそのたびに検出器に入力し，そのデータ内に存在する各物体の情報を得る．そして続く追跡では，新しく得られた各物体の情報に対して，今までに得られたどの物体と同じ物体であるのか，もしくは今までにない新しい物体なのかを判断する対応付けを行う．
 
-\begin{equation}
-    \label{eq:sort_state}
-    \bm{s}_t \equiv \left[x_t, \dot{x}_t, y, \dot{y}_t, w, h\right]
-\end{equation}
-で表せられる．もちろん位置$(x,y)$の二階時間微分やサイズ$w,h$の一階時間微分を加えることも可能であるが，本論文では議論しない．
-\par
-以降の既存手法の説明では，出力される変数は第二章と同様に式\ref{eq:output1}--\ref{eq:output2}であるとする．便宜のために各式を再掲する．
+YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を高速で行うことができるニューラルネットワークである．物体追跡ではリアルタイム性が重視されるため，特にYOLOはTracking-by-Detectionの検出器として利用される．またSORT（Simple Onle Realtime Tracking）\cite{bewley2016simple,wojke2017simple,du2023strongsort}は，IDを割り振ることで追跡を達成する最も単純な手法であり，対応付け手法の基盤として優れている．このSORTは，連続する2フレーム間で対応付けを行うハンガリー法\cite{kuhn1955hungarian}と，対応付けに予測位置を利用するためのカルマンフィルタ\cite{bishop2001introduction}で構成されている．
 
-\begin{equation}
-    \label{eq:output1on3}
-    \begin{aligned}
-        S^{\text{pred}}_t &\equiv \left\{ \left. \hat{\bm{s}}_t^{(i)}\right| i \in \mathcal{I}_t\right\}
-    \end{aligned}
-\end{equation}
-\begin{equation}
-    \label{eq:output2on3}
-    \begin{aligned}
-        S^{\text{init}}_t &\equiv \left\{ \left. \hat{\bm{s}}_{t_s^{(i)}}^{(i)}\right| i \in \mathcal{I}_t\right\}
-    \end{aligned}
-\end{equation}
-ここで$\hat{A}$は$A$の推定値，$\mathcal{I}_t$は時刻$t$において追跡している物体の集合，$t_s^{(i)}$は物体$i$が追跡され始めた時刻を表している．
+よって以降の節では，YOLOとSORTを組み合わせたTracking-by-Detectionの全体のアルゴリズムを述べた後，YOLO，ハンガリー法およびカルマンフィルタについてそのアーキテクチャやアルゴリズムについて詳細に述べる．
 
-既存手法YOLO+SORTは，物体検出手法とReID手法を組み合わせた手法である（図\ref{fig:YOLO+SORT}参照）．物体検出とは，画像内に映る物体を前述したBounding-Boxで位置検出し，さらにその物体が何であるかを同定するタスクである．``何であるか''は機械学習の分野では``クラス"と呼び，事前に犬や猫といったクラスの候補を与えておくことで，各物体がいずれのクラスに属するかを判定する．また物体検出は，画像内に複数の物体が写っている場合にもそれぞれをクラス分類できることが強みである．一方ReIDとは，検出された各Bounding-BoxにIDを振るタスクである．例えば２枚の画像内に同一個体が写っている場合には，同じIDを振ることが望まれる．これを画像時系列データに適用すれば，追跡をしていることと同義となる．
-\par
-以降の節で，各手法について詳細に述べる．
+    \subsection{YOLOとSORTによるTracking-by-Detection}
+    \label{subsec:yolo_and_sort}
+    
+    全体のアルゴリズムを説明する前に，まずはYOLOを用いて達成される物体検出というタスクとSORTを用いて達成されるReIDというタスクについて，それぞれの入力や出力を述べる．
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=\linewidth]{fig/yolosort.pdf}
-    \caption[YOLO+SORTの処理概要]{YOLO+SORTの処理概要}
-    \label{fig:YOLO+SORT}
-\end{figure}
+    \subsubsection{物体検出}
+    物体検出とは，コンピュータビジョンタスクおよび技術の一つであり，一枚の画像を入力した際に，物体の位置とその物体が何であるかを行うタスクのことである．物体の位置はバウンディングボックスと呼ばれる矩形領域で表され，一方物体が何であるかは，事前に設定したクラス候補に対するクラス分類で行われる．また，画像内に複数の物体が存在する場合に，それらを同時かつ個別に位置特定およびクラス分類を行うことができる．
 
-    \subsection{YOLOによる物体検出}
-    YOLO（You Only Look Once）は，2016年に提案された物体検出を行う深層学習モデルである．この手法が開発される以前では，矩形領域抽出とクラス分類の処理は段階的に行われていた\cite{girshick2014rich,girshick2015fast,ren2016faster}ために処理時間に問題があったが，YOLOではそれらをすべてニューラルネットワークで処理するモデルとして提案され，その高速性から以降リアルタイム物体検出の手法として確立した．
-    またリアルタイムな処理を必要とされる物体追跡にも，デファクトスタンダードとして使用される．
-    \par
-    YOLOの性能についてしばしば言及されるのは，推論時間と精度のトレードオフである．ここでの推論とは，一般的な機械学習モデルを学習させた後に目的のデータを入力して結果を得る操作のことをいう．一般的に，モデルの学習パラメータ数を増やすほど精度が上がる一方，推論時間は大きくなってしまい，逆もまた然りである．初期モデルのversion1（以降v1と表記する）以降，このトレードオフの改善を目指して，2024年12月時点でYOLOはv2からv10まで開発されている．図\ref{fig:v10_performance}に示すようにv10が現状では最も優れているため，以降ではv10を前提として説明を進める．
+    物体の位置を示すバウンディングボックス$\bm{b}$は，画像上のピクセル位置$(x, y)$と画像における物体の幅と高さ$(w,h)$を用いて，
+    \begin{equation}
+        \label{eq:bounding_box}
+        \bm{b} = \left[x, y, w, h\right]^{\top}
+    \end{equation}
+    で表される．また一つの検出されたバウンディングボックスについて，その所属するクラスは，事前に候補とした各クラスに対する$[0, 1]$の確率で表現される．すなわち出力されるクラス確率$\bm{c}$は，用意したクラス候補集合$\mathcal{C}$を$\left\{c_i \mid i \in \mathcal{C}\right\}$として，
+    \begin{equation}
+        \label{eq:class_probability}
+        \bm{c} = \left\{p(c_i) \mid i \in \mathcal{C}\right\}
+    \end{equation}
+    で表される．
+
+    これらを用いて，物体検出器$f$がある画像$X \in \mathbb{R}^{W \times H \times 3}$を入力した時に得られる出力$Y$は，
+    \begin{equation}
+        \label{eq:object_detection}
+        \begin{aligned}
+            f(X) &= Y
+            \\ &= \left\{\bm{b}^{(j)}, ~\bm{c}^{(j)} \mid j \in N_X\right\}
+        \end{aligned}
+    \end{equation}
+    と表される．ここで$N_X$は，ある画像$X$を入力した際に検出された物体数を表している．また$j$はその各物体を表すインデックスである．
+
+    \subsubsection{ReID}
+    ReIDとは，検出された各物体の情報（物体検出であればバウンディングボックス）に対して，個体を識別するためのIDを割り当てるタスクである．これにより，同一の個体由来の検出情報の対応付けが達成され，ある物体がどのような軌跡を描いたのか，どこから来たのか，さらにはどのように形状が変化したのかなどの情報を得ることができる．
+
+    ここで，時刻$t$に得られた画像を入力し検出器によって得られた物体の情報の集合$D_t$を，
+    \begin{equation}
+        \label{eq:input_to_reid}
+        D_t = \left\{\bm{d}^{(i)} \mid i \in N_t\right\}
+    \end{equation}
+    と表す．ここで$N_t$は時刻$t$の画像を検出器に入力した際に，検出された物体数を表す．また$\bm{d}^{(i)}$は$i$番目の検出情報を表す．例えば検出器に物体検出器を用いれば，$\bm{d}^{(i)}$は式\ref{eq:bounding_box}で表されるバウンディングボックスである．
+
+    ここで時刻$t-1$までに得られた追跡情報のIDの集合を$\mathcal{I}_{t-1} = \left\{1, 2, \dots\right\}$とし，ReIDによって，対応付けされた関係を表すペア$(i, j)$の集合$M = \left\{(i, j)\right\}$が得られたとする（$i$は$\mathcal{I}_{t-1}$，$j$は$D_t$のインデックスに対応している）．このとき$D_t$および$\mathcal{I}_{t-1}$を入力とするReIDを行う関数を$g(D_t)$とすると，その出力$O_t$は，
+    \begin{eqnarray}
+        \label{eq:output_of_reid}
+        \begin{aligned}
+            g(D_t, \mathcal{I}_{t-1}) &= O_t
+            \\ &= \left\{\bm{d}_{\text{reid}}^{(i)} \mid i \in \mathcal{I}_t\right\}
+            \\, &\textbf{where } \bm{d}_{\text{reid}}^{(i)} = \bm{d}^{(j)} ~ \forall (i, j) \in M, \textbf{ or } i \in \mathcal{I}_t \setminus \mathcal{I}_{t-1}
+        \end{aligned}
+    \end{eqnarray}
+    と表される．ここで$\mathcal{I}_t \setminus \mathcal{I}_{t-1}$は，時刻$t$で新たに検出され始めたと認識された物体のID集合を表し，$\bm{d}_{\text{reid}}^{(i)}$は時刻$t$のReIDへの入力$D_t$のうち，IDが$i$の物体に対応付けられたものか，新たに検出され始めたと認識されたものである．
+
+    \subsubsection{物体検出とReIDによるTracking-by-Detection}
+    以上の定式化より，物体検出とReIDによるTracking-by-Detectionは，毎時刻$t$における$f(X_t)$と$g(D_t, \mathcal{I}_{t-1})$の繰り返し（アルゴリズム\ref{alg:object_detection_and_reidentification}の2, 3, 7, 8行目）によって実施される．また最初の時刻の場合は，物体検出の結果は全て別個体由来のはずであるため，そのままインデックスをIDをして$O_1$を生成する（アルゴリズム\ref{alg:object_detection_and_reidentification}の5行目）．アルゴリズム\ref{alg:object_detection_and_reidentification}での出力は，各時刻でIDを割り振られた検出情報の集合$O_1, O_2, \dots, O_T$であるが，これらの情報をIDごとに分ければ，各物体がどのような軌跡を通ってきたかを容易に確認することが可能である．
+
+    \begin{algorithm}[t]
+        \caption{Object Detection and Re-Identification}
+        \label{alg:object_detection_and_reidentification}
+        \begin{algorithmic}[1]
+            \Require $X_1, X_2, \dots, X_T, ~f, ~g$
+            \Ensure $O_1, O_2, \dots, O_T$
+            \For {$t = 1 \text{ to } T$}
+                \State $D_t = f(X_t)$
+                \State $ N_t = \left|D_t\right|$
+                \If {$t = 0$}
+                    \State $\mathcal{I}_t = \left\{1, 2, \dots, N_t\right\}, ~ O_t = \left\{\bm{d}^{(i)} \mid i \in \mathcal{I}_t\right\}$
+                \Else
+                    \State $O_t = g(D_t, \mathcal{I}_{t-1})$
+                    \State $\mathcal{I}_t = \left\{i \mid \bm{d}_{\text{reid}}^{(i)} \in O_t\right\}$
+                \EndIf
+            \EndFor
+            \State \Return $O_1, O_2, \dots, O_T$
+        \end{algorithmic}
+    \end{algorithm}
+
+    \subsection{リアルタイム物体検出手法：YOLO}
+    \label{subsec:object_detection}
+
+    物体検出手法のYOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，2016年に提案された深層学習モデルである．この手法が開発される以前では，矩形領域抽出とクラス分類の処理は段階的に行われていた\cite{girshick2014rich,girshick2015fast,ren2016faster}ために高速性に欠けていたが，YOLOでは矩形領域抽出とクラス分類をすべてニューラルネットで行うことによりその問題を解決し，リアルタイム物体検出手法として確立した．
+
+    物体検出手法としてしばしば言及される性能は，推論時間と精度のトレードオフである．ここでの推論とは，機械学習モデルを学習させた後に目的のデータを入力して所望する結果を得る操作のことをいう．一般的に深層学習では，モデルの学習パラメータ数を増やせば増やすほど精度が上がる一方，推論時間が大きくなってしまう（図\ref{fig:yolo_tradeoff}参照）．また逆に推論時間を短くするには，精度の低下を招いてしまう．初期モデルのバージョン1（以降v1と表記）以降，この推論時間と精度の向上を図って新たなバージョンが開発され続け，2024年10時点でv10までアップデートされている．
 
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/yolov10_performance.pdf}
-        \caption[yoloのバージョン比較（（左）性能と推論速度（右）性能とモデルパラメータ数）]{yoloのバージョン比較（（左）性能と推論速度（右）性能とモデルパラメータ数）: 縦軸の\textrm{COCO AP}が性能，横軸の\textrm{Latency}は推論にかかる時間，\textrm{Number of Parameters}はモデルの大きさを表す．}
-        \label{fig:v10_performance}
-    \end{figure}
+        \caption[yoloのバージョン比較]{yoloのバージョン比較：
+        （左）推論精度と推論時間のプロット．縦軸はCOCOデータセットにおけるAPという評価指標であり，100が最大値である．横軸は一枚の画像の物体検出にかかった時間の平均値を示している．（右）横軸にモデルの学習パラメータ数を取った場合の推論精度のプロット．学習パラメータ数を大きくするほど精度が上がっている．（\cite{wang2024yolov10}より引用）}
+        \label{fig:yolo_tradeoff}
+    \end{figure}    
 
-    YOLOv10は，画像の埋め込み表現$z$を獲得する写像$f(\cdot ; \theta)$（式\ref{eq:f}）とそこから物体検出用の矩形領域抽出とクラス分類に対応する出力$y$を獲得する写像$g(\cdot ; \phi)$（式\ref{eq:g}）で構成される．
+    \subsubsection{YOLOの構成要素}
+    \label{subsubsec:yolo_components}
 
-    \begin{equation}
-        \label{eq:f}
-        \begin{gathered}
-            z = f(X; \theta)
-            \\ z \in \mathbb{R}^d, \quad X \in \mathbb{R}^{W \times H \times 3}
-        \end{gathered}
-    \end{equation}
-    \begin{equation}
-        \label{eq:g}
-        \begin{gathered}
-            y = g(z; \phi)
-            \\ y \in \mathbb{R}^{n \times \left(n_c + 5\right)}
-        \end{gathered}
-    \end{equation}
-    ここで$d$は埋め込み表現の次元数，$W$と$H$は入力画像のピクセル幅と高さ，$n$は出力されるBounding-Boxの個数，$n_c$はクラス分類において事前に準備するクラス数である．また$\theta, \phi$は学習パラメータであり，学習ステップで最適化される．
-    \par
-    式\ref{eq:g}における$n_c + 5$は，Boundng-Boxの$\left[x, y, w, h\right]$に加え，$[0,1]$のConfidence-Scoreと条件付きクラス確率を表している．このConfidence-Scoreとは物体らしさを表し，各クラスに属する確率は，この物体らしさと条件付きクラス確率の積で与えられる．例えばクラスの候補に犬と猫の二つを準備し（$n_c=2$），Confidence-Scoreが$0.8$，条件付きクラス確率がそれぞれ$0.8, 0.2$となった場合は，犬である確率が$0.64$，猫である確率が$0.16$となり，その物体が犬である可能性が高い，という解釈ができる．
-    \par
-    またYOLOv10では，Confidence-Scoreの閾値処理を行う．すなわち，閾値$\sigma_{conf}$を定め，前述のクラス確率の最大値が$\sigma_{conf}$以下であるものを出力しない．この処理により，本来は物体ではないのに物体であると判断したもの（偽陽性という）が出力される可能性を抑えることができる．ただし閾値を大きくした場合には，本来は物体であるのに検出をしない（偽陰性という）可能性が大きくなってしまうことに注意しなければならない．
-    \par
-    最後にYOLOv10の学習方法について述べる．一般的に学習パラメータ数の大きいニューラルネットワークや学習データが高価である場合には，図\ref{fig:PTandFT}のようにPre-TrainingとFine-Tuningという２つのステップに分けて学習が行われる．大規模なデータセットでモデルを学習させた後（Pre-Training），その学習されたパラメターを初期値として小規模なデータセットでさらに学習パラメータを調整させる（Fine-Tuning）\cite{radford2018improving}．例えば物体検出用のモデルを構築する際に，データが安価に手に入る画像分類でPre-Trainingさせた後，物体検出用のデータセットでFine-Tuningを行う．これにより，画像の処理に適した状態から物体検出用に特化させることができ，学習の安定や高精度を図れる．また物体検出用のデータセットを大量に準備する必要もなくなる．また他にも，Pre-Trainingの際に$100$クラス分類の物体検出で学習させ，Fine-Tuningで特殊な対象$1$クラス分類の物体検出を学習させることもある．Fine-Tuningでは，埋め込み表現を得る$f(\cdot ; \theta)$の部分のみを引き継ぎ，$g(\cdot; \phi)$の部分は目的のタスク用に新しく学習し直すのが一般的である．
+    YOLOは式\ref{eq:bounding_box}で表されるバウンディングボックスと式\ref{eq:class_probability}に加え，バウンディングボックスごとに信頼度スコア（Confidence score）と呼ばれる値を出力する．この値は，検出されたバウンディングボックスがどれだけ物体らしいかを表す．またYOLOの出力におけるクラス確率は式\ref{eq:class_probability}の各値$p(c_i)$にこの信頼度スコアを掛けた値になる．一般的に物体検出では，そこに物体があるはずなのに検出ができなかった偽陰性（False Negative, 以後FNと呼称する）と，物体がないはずの場所を検出してしまう偽陽性（False Positive, 以後FPと呼称する）の二種類のエラーが発生する．通常YOLOでは，信頼度スコアの閾値を設けることでこれらのバランスを抑える．例えば，閾値を高くすれば基準が厳しくなるのでFPが減り，逆に小さくすれば基準が甘くなるのでFNを減らすことができる．また信頼度スコアは後述の非最大抑制にも利用される．
+
+    非最大抑制（Non-Maximum Suppression, 以後NMSと呼称する）は，ある画像内の物体に対して，検出結果が二つ以上得られてしまった際にそれらを抑制するための事後的アルゴリズムである．NMSでは，前述の信頼度スコアが高い順に，一つのバウンディングボックスに対して重なり具合が一定値以上のバウンディングボックスがあるか確認し，ある場合には信頼度スコアが低い方を削除していく．ここでの重なり具合の評価指標としてはIntersection of Union（IoU）が用いられる．ただしNMSは時間的なコストが高く，それに対して改善されたv10ではアルゴリズムに入っていないことに注意されたい．
+
+    \subsubsection{YOLOの学習方法}
+
+    先程も述べたように深層学習では一般的に，モデルの学習パラメータ数を大きくするほど精度が改善される．しかしながらそういったモデルの学習には，より大規模なデータセットを準備しなければならず，学習にも時間がかかる．そういった場合，何かしらのタスクを解くためのモデルを作るたびにゼロからモデルを学習させるのは，データ準備の面でも学習の面でも非常に非効率である．また場合によっては，学習パラメータの初期値によって学習が思ったように進まないこともある．
+
+    そこで深層学習でよく用いられる学習方法が，事前学習（Pre-Training）と微調整（Fine-Tuning）である\cite{radford2018improving}．まず事前学習では，大規模なデータセットで学習を行い汎用的な能力を獲得させ，微調整で本来の目的のタスクおよびデータセットを用いて最終的な学習を行い，そのタスクに特化したモデルを構築する．またこの大規模なデータセットによって事前学習モデルは，オープンソースで公開されていることが多い．例えばコンピュータビジョン分野では，データセットの作成が安価である画像分類で事前学習を行い，画像入力に適したモデルを構築する．これにより，大量のデータセットが高価なタスクに適したモデルの構築が可能である．また物体検出やクラス分類では，事前学習時と微調整時でクラスの候補を変えることも可能である．この場合は，最終層だけ新しいものに取り替えればよい（図\ref{fig:PTandFT}参照）．
 
     \begin{figure}[t]
         \centering    
         \includegraphics[width=\linewidth]{fig/PTandFT.pdf}
-        \caption[Pre-TrainingとFine-Tuning]{Pre-TrainingとFine-Tuning}
+        \caption[事前学習と微調整]{事前学習と微調整：この図の例では，微調整時に最終層だけを取り替え，それ以外の層は学習パラメータを固定する例を示している．他にも，前半の層だけ学習の度合いを表す学習率を小さくしたり，全体に対して微調整時のみ学習率を下げるなど，様々な選択肢がある．}
         \label{fig:PTandFT}
     \end{figure}
-    
-    \subsection{SORTによるReID}
-    SORT（Simple Online Realtime Tracking）は，YOLOなどの物体検出によって得られたBonding-Boxの時系列データを入力とし，これらBounding-BoxにIDを振りながら各個体の軌跡を推定する，最も基礎的な手法である．このアルゴリズムは時系列データを処理するKalman Filterと時刻間の対応付けを行うHungarian Algorithmで構成される．まずはこれらの詳細を説明する．
 
-        \subsubsection{Kalman Filter}
-        Kalman Filterとは，センサーなどから得られた時系列データからシステム内部の状態を推定するための最適化アルゴリズムである．ここでは時系列データである観測変数を$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$，システム内部の状態変数を$\bm{s}_1, \bm{s}_2, \dots, \bm{s}_t$と表記する．Kalman Filterでは状態変数$\bm{s}_t$を推定するために，その確率分布を考える．すなわち，観測系列$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$が得られたときの状態変数$\bm{s}_t$の事後分布$p(\bm{s}_t \left| \bm{o}_1, \bm{o}_2, \dots, \bm{o}_t \right.)$を計算する．
-        \par
-        ベイズの定理から，所望の事後確率は
-        \begin{equation}
-            \label{eq:filtering1}
-            p(\left. \bm{s}_t \right| \bm{o}_1,\dots, \bm{o}_t ) = \frac{p(\left. \bm{o}_t \right| \bm{o}_1,\dots, \bm{o}_{t-1}, \bm{s}_t) p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})}{p(\left.\bm{o}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})}
-        \end{equation}
-        と変形できる．また右辺の分子後半部$p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})$は条件付き確率の性質から，
-        \begin{equation}
-            \label{eq:prediction1}
-            \begin{aligned}
-                p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1}) &= \int p(\left.\bm{s}_t, \bm{s}_{t-1}\right| \bm{o}_1,\dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
-                \\ &= \int p(\left.\bm{s}_t\right|\bm{s}_{t-1}, \bm{o}_1,\dots, \bm{o}_{t-1}) p(\left.\bm{s}_{t-1}\right| \bm{o}_1,\dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
-            \end{aligned}        
-        \end{equation}
-        と変形できる．
-        \par
-        式\ref{eq:filtering1},\ref{eq:prediction1}から，$p(\bm{s}_0\left|\bm{o}_0\right.) = p(\bm{s}_0)$が与えられれば全ての時刻$t=1,2,\dots,t$における$p(\bm{s}_t\left|\bm{o}_1,\dots,\bm{o}_t\right.)$が理論上は計算できる．しかしながら式\ref{eq:filtering1}における右辺の分母や式\ref{eq:prediction1}における右辺には積分が含まれるため，現実には計算できない．そのためKalman Filterでは一般的に，式\ref{eq:linear_setting}に見られる線形性及びマルコフ性をシステムに仮定している（この問題設定におけるKalman Filterを特別に一般線形Kalman Filterと呼ぶこともある）．
-        \begin{equation}
-            \label{eq:linear_setting}
-            \begin{aligned}
-                \bm{s}_{t+1} &= F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
-                \\ \bm{o}_t &= H_t \bm{s}_t + G_t \bm{u}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
-            \end{aligned}        
-        \end{equation}
-        上の式は状態遷移式，下の式は観測方程式と呼ばれる．ここで$F_t$は遷移行列と呼ばれる状態変数の時間遷移を，$H_t$は観測行列と呼ばれる観測変数との対応を表す行列である．また$\bm{v}_t$はシステムノイズ，$\bm{w}_t$は観測ノイズと呼ばれ，正規性を持ったホワイトノイズである．また$\bm{u}_t$はこちら側が制御する入力変数であり，ここでは後述の問題に対応するために観測方程式に加えている．$G_t$はその入力変数が観測変数に与える影響を表す行列である．
-        \par
-        式\ref{eq:linear_setting}より，明らかに状態変数$\bm{s}_t$と観測変数$\bm{o}_t$はマルコフ性を持っているため，式\ref{eq:filtering1}及び式\ref{eq:prediction1}は，
-        \begin{equation}
-            \label{eq:filtering2}
-            \begin{aligned}
-                p(\left. \bm{s}_t \right| \bm{o}_1,\dots, \bm{o}_t ) &= \frac{p(\left. \bm{o}_t \right| \bm{s}_t) p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})}{p(\left.\bm{o}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1})}
-            \end{aligned}
-        \end{equation}
-        \begin{equation}
-            \label{eq:prediction2}
-            \begin{aligned}
-                p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1}) = \int p(\left.\bm{s}_t\right|\bm{s}_{t-1}) p(\left.\bm{s}_{t-1}\right| \bm{o}_1,\dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
-            \end{aligned}
-        \end{equation}
-        と書き換えられる．
-        \par
-        また式\ref{eq:linear_setting}より，$\bm{s}_t$及び$\bm{o}_t$は$\bm{s}_{t-1}$が正規分布に従えば，線形な式であるためにこれらもまた正規分布に従うことが分かる．すなわち$p(\bm{s}_0)$に正規分布を仮定すれば，全ての$t$で状態変数$\bm{s}_t$と観測変数$\bm{o}_t$は正規分布に従う．よって，式\ref{eq:filtering2}と式\ref{eq:prediction2}は式\ref{eq:normal_format}のように表すことができ，
-        \begin{equation}
-            \label{eq:normal_format}
-            \begin{aligned}
-                p(\left. \bm{s}_t \right| \bm{o}_1,\dots, \bm{o}_t ) &= \mathcal{N}(\bm{\mu}_{t|t}, \Sigma_{t|t})
-                \\ p(\left.\bm{s}_t\right| \bm{o}_1,\dots, \bm{o}_{t-1}) &= \mathcal{N}(\bm{\mu}_{t|t-1}, \Sigma_{t|t-1})
-            \end{aligned}
-        \end{equation}
-        以下のように状態遷移式及び観測方程式上の行列で表現でき，計算可能となる．
-        \begin{equation}
-            \begin{aligned}
-                \bm{\mu}_{t|t-1} &= F_{t-1} \bm{\mu}_{t-1|t-1}
-                \\\Sigma_{t|t-1} &= F_{t-1} \Sigma_{t-1|t-1} F_{t-1}^{\top} + Q_{t-1}
-                \\\bm{\mu}_{t|t} &= \Sigma_{t|t} \left( H_t R_t^{-1} \bm{o}_t + \Sigma_{t|t-1}^{-1} \bm{\mu}_{t|t-1} \right)
-                \\\Sigma_{t|t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t|t-1}^{-1}\right)^{-1}
-            \end{aligned}                    
-        \end{equation}
-        また一般的にはKalman Gain，$K_t$を，
-        \begin{equation}
-            \label{eq:kalman_gain}
-            K_t \equiv \Sigma_{t|t-1}H_t^{\top} \left( H_t\Sigma_{t|t-1}H_t^{\top} + R_t\right)^{-1}
-        \end{equation}
-        と定義して，代わりに以下の式を用いる．
-        \begin{equation}
-            \label{eq:kalman_equations}
-            \begin{aligned}
-                \bm{\mu}_{t|t-1} &= F_{t-1} \bm{\mu}_{t-1|t-1}
-                \\\Sigma_{t|t-1} &= F_{t-1} \Sigma_{t-1|t-1} F_{t-1}^{\top} + Q_{t-1}
-                \\\bm{\mu}_{t|t} &= \bm{\mu}_{t|t-1} + K_t \left(\bm{o}_t - H_t \bm{\mu}_{t|t-1}\right)
-                \\\Sigma_{t|t} &= (I - K_t H_t) \Sigma_{t|t-1}
-            \end{aligned}                    
-        \end{equation}
-        ここで$I$は単位行列である．
+    \subsection{SORTの概要}
+    \label{subsec:abstract_of_sort}
 
-        またKalman Filterでは，事後確率が最大な点を推定値とする．すなわち観測系列$\bm{o}_1,\bm{o}_2,\dots,\bm{o}_t$が得られたときの最適状態変数推定値$\hat{\bm{s}}_{t|t}$は，
-        \begin{equation}
-            \begin{aligned}
-                \hat{\bm{s}}_{t|t} &= \underset{\bm{s}_t \in \mathbb{R}^{n}}{\text{argmax}}\ p(\left. \bm{s}_t \right| \bm{o}_1,\dots, \bm{o}_t )
-                \\ &= \bm{\mu}_{t|t}
-            \end{aligned}
-        \end{equation}
-        で与えられる．ここで$n$は状態変数の次元数である．
-        \par
-        以上の議論を踏まえ，観測系列$\bm{o}_1,\bm{o}_2,\dots, \bm{o}_T$が得られた時に状態変数$\bm{s}_T$の推定値$\hat{\bm{s}}_T$を計算するアルゴリズムをアルゴリズム\ref{alg:kalman_filter}に示す．ただしここでは簡単のため，遷移行列$F_t$，観測行列$H_t$，システムノイズ共分散行列$Q_t$，観測ノイズ共分散行列$R_t$は定常であることを仮定している．
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=\linewidth]{fig/sort.pdf}
+        \caption[時刻$t=4$におけるSORTの処理の概略図]{時刻$t=4$におけるSORTの処理の概略図: SORTではBounding-Boxを観測変数として状態変数の推定を行う．このときに複数のBounding-Boxを同一個体へ割り当てるために対応付けを行う．図のように，対応付けは物体検出によって得たBouning-Boxと観測予測による予測Bouding-Box間で行う．図の例では，赤色と緑色の物体は状態更新が行われている．またどの予測Bounding-Boxとも対応づかなかったものは新しい個体として認識される（黄色）．}
+        \label{fig:sort}
+    \end{figure}
 
-        \begin{algorithm}[t]
-            \caption{Kalman Filter}
-            \label{alg:kalman_filter}
-            \begin{algorithmic}[1]
-                \REQUIRE $\bm{o}_1,\bm{o}_2,\dots, \bm{o}_T, F, H, Q, R, \bm{\mu}_{0|0}, \Sigma_{0|0}$
-                \ENSURE $\hat{\bm{s}}_T$
-                \STATE \textbf{Initialize: } $\hat{\bm{s}}_t,K_t, \bm{\mu}_{t|t-1}, \Sigma_{t|t-1}, \bm{\mu}_{t|t} \leftarrow \bm{\mu}_{0|0}, \Sigma_{t|t} \leftarrow \Sigma_{0|0}$
-                \FOR {$t = 1 \text{ to } T$}
-                    \STATE $\bm{\mu}_{t|t-1} \leftarrow F \bm{\mu}_{t-1|t-1}$
-                    \STATE $\Sigma_{t|t-1} \leftarrow F \Sigma_{t-1|t-1} F^{\top} + Q$
-                    \STATE $K_t \leftarrow \Sigma_{t|t-1} H^{\top} \left(H\Sigma_{t|t-1}H^{\top} + R\right)$
-                    \STATE $\bm{\mu}_{t|t} \leftarrow \bm{\mu}_{t|t-1} + K_t \left(\bm{o}_t - H\bm{\mu}_{t|t-1}\right)$
-                    \STATE $\Sigma_{t|t} \leftarrow \left(I - K_t H\right) \Sigma_{t|t-1}$
-                \ENDFOR
-                \RETURN $\bm{\mu}_{t|t}$
-            \end{algorithmic}
-        \end{algorithm}
+    Tracking-by-DetectionをYOLOによる物体検出とSORTによる追跡によって行う場合，時刻$t$におけるSORTへの出力は，
+    \begin{equation}
+        \label{eq:input_to_sort}
+        B_t = \left\{\bm{b}_t^{(i)} \mid i \in \left\{1 ,2, \dots, N_t\right\}\right\}
+    \end{equation}
+    で表される．ここで$\bm{b}_t^{(i)}$は式\ref{eq:bounding_box}に時刻を表す添字$t$を加えたバウンディングボックスである．また$N_t$は前節と同様，時刻$t$において検出された物体の個数である．ReIDの目的は，これらのバウンディングボックスに，同一の個体由来のバウンディングボックスには同じIDが振られるように，IDの割り振りを行うことであった．
 
-        以後，アルゴリズム\ref{alg:kalman_filter}における$3,4$行目を観測予測，$5,6,7$行目を状態更新と呼ぶことにする．
+    SORTではこのIDの割り振りを行うために，連続する二時刻分のバウンディングボックスの対応付けを行う．これにより，時刻$t-1$のあるバウンディングボックスと同じ個体であると認識されたバウンディングボックスには，そのIDが振られる．また同じ個体が時刻$t-1$に見つからない場合は，新しい物体として新しいIDが振られる．これは割当問題として定式化され，後述のハンガリー法によって最適化が行われる．
 
-        \subsubsection{Hungarian Algorithm}
-        Hungarian Algorithm\cite{kuhn1955hungarian}は，複数個のタスクを複数の作業者に最適に割り当てる，割当問題の数理アルゴリズムである．この節では，割当問題の定式化と，タスクと作業者の個数が異なる問題への適用方法を述べる．
-        
-        割当問題を考えるために，$n$個のタスク$a_1, a_2, \dots, a_n$とそれらのタスクを割り当てられる$n$人の作業者$b_1, b_2, \dots, b_n$が存在すると仮定する．またある作業者$b_j$がタスク$a_i$をこなしたときの成果を$s_{ij}$と定義し，この成果を並べた行列$S \in \mathbb{R}_+^{n \times n}$をスコア行列と呼ぶこととする．また，どの作業者がどのタスクをこなしたのかを示す行列を割当行列と呼び，$Q \in \{0, 1\}^{n \times n}$で表す．この$Q$の$i$行目$j$列目の成分$q_{ij}$が$1$であれば，作業者$b_j$がタスク$a_i$をこなしたことを示し，$0$であればこなしていないことを示している．
+    しかしながら単純な割当問題を解くだけでは，速度を持った物体や，FPSが低いタスクにうまく適用することができない．この理由については節\ref{subsec:sort_algorithm}で述べる．これに対処するため，SORTではカルマンフィルタによる時刻$t$のバウンディングボックス予測を行い，この予測と実際のバウンディングボックス間で対応付けを行う（図\ref{fig:sort}参照）．これにより，別個体を同一とみなしてしまうミスを防ぎながら対応付けを行うことが可能になる．
 
-        Hungarian Algorithmの出力は，この得られる成果を最大化する割当行列$Q^*$，すなわち
-        \begin{equation}
-            \label{eq:assignment_objective}
-            Q^* = \underset{Q}{\text{argmax}} \sum_{(i,j)} c_{ij} q_{ij}
-        \end{equation}
-        である．また制約として，
-        \begin{equation}
-            \label{eq:assignment_constraint}
-            \begin{aligned}
-                \sum_i q_{ij} &= 1, \quad \forall j = 1, 2, \dots, n
-                \\ \sum_j q_{ij} &= 1, \quad \forall i = 1, 2, \dots, n
-            \end{aligned}
-        \end{equation}
-        が課される．すなわち，各タスクを割り当てられるのは一人であり，一人の作業者が行うタスクもまた一つである．また作業者のいないタスクとタスクが割り当てられていない作業者もなしとしている．
+    以降の節では，基本構成要素であるハンガリー法による割当問題とカルマンフィルタについて述べた後， SORTの詳細なアルゴリズムを述べる．
 
-        ここまでは，タスクと作業者の個数が同じ場合の割当問題を説明してきたが，一般的な割当問題では，作業者やタスクに余りがある場合も考えられる．すなわち$m$人の作業者$b_1, b_2, \dots, b_m$を考えたときに，$n \neq m$の場合も考えられる．ここでは，タスクに余りがある場合（$n > m$）には$n-m$個のタスクには作業者を割り当てず，作業者に余りがある場合（$n < m$）には$m-n$人の作業者に仕事を割り当てない問題を考える．すなわち制約\ref{eq:assignment_constraint}は，
-        \begin{equation}
-            \label{eq:assignment_constraint2}
-            \begin{aligned}
-                \sum_i q_{ij} &\in \{0, 1\}, \quad \forall j = 1, 2, \dots, n
-                \\ \sum_j q_{ij} &\in \{0, 1\}, \quad \forall i = 1, 2, \dots, n
-                \\ \sum_{i,j} q_{ij} &= \min (n, m)
-            \end{aligned}
-        \end{equation}
-        と書き換えられる．
+    \subsection{対応付け手法：ハンガリー法による割当問題最適化}
+    \label{subsec:hungarian_algorithm}
 
-        この場合はスコア行列および割当行列が正方行列でなくなるため，Hungarian Algorithmを用いることができない．そこで，新たな行および列を足すことで正方行列を作り出すことを考える．スコア行列$S \in \mathbb{R}_+^{n \times m}$において$n > m$の場合は，要素が全て$0$の部分行列を補うことで$S \in \mathbb{R}_+^{n \times n}$とし，$n < m$の場合は同様にして$S \in \mathbb{R}_+^{m \times m}$とする．この新たに補われた部分に該当するタスクおよび作業者をダミータスクおよびダミー作業者と呼ぶことにする．
+    \begin{algorithm}[t]
+        \caption{Hungarian Matching}
+        \label{alg:hungarian_matching}
+        \begin{algorithmic}[1]
+            \Require $A = \left\{a_1, a_2, \dots, a_n\right\}, B = \left\{b_1, b_2, \dots, b_m\right\}$
+            \Ensure $M = \left\{(i, j) \mid Q^*_{ij} = 1 \mid i \leq n \land j \leq m\right\}$
+            \State $\textbf{Initialize: } \ell = \max(n, m), ~ S = \bm{0}^{\ell \times \ell} \in \mathbb{R}_+^{\ell \times \ell}$
+            \For {$i = 1 \text{ to } \ell$}
+                \For {$j = 1 \text{ to } \ell$}
+                    \If {$ i \leq n \land j \leq m$}
+                        \State $S_{ij} \gets f_{\text{sim}}(a_i, b_j)$
+                    \Else
+                        \State $S_{ij} \gets 0$
+                    \EndIf
+                \EndFor
+            \EndFor
+            \State $Q^* = hungarian\_matching(S)$
+            \State \Return $\left\{(i, j) \mid Q^*_{ij} = 1 \mid i \leq n \land j \leq m\right\}$
+        \end{algorithmic}
+    \end{algorithm}
 
-        $n > m$の場合は，いくつかのタスクがダミー作業者に割り当てられることになる．しかしダミー作業者に割り当てられると，それにより得られるスコアは$0$である．よって作業者には合計スコアを最大にするようなタスクが割り当てられるため，この解は制約\ref{eq:assignment_constraint2}のもとで計算された最適解\ref{eq:assignment_objective}と同じになる．また$n < m$の場合も同様に，ダミータスクをある作業者に割り当てた際に得られるスコアも$0$であるため，スコアが$0$より大きいタスクが優先的に作業者に割り当てられ，やはり\ref{eq:assignment_constraint2}のもとで計算された最適解と同じになる．
-        
-        以上の議論により，タスク数と作業者数が異なる場合にもHungarian Algorithmを適用することができる．アルゴリズム\ref{alg:hungarian_algorithm}にHungarian Algorithmをタスク集合$A$と作業者集合$B$の割当問題に適用した場合のアルゴリズムを示す．ただしここではスコアを計算する関数$f_{\text{socre}}$を使用している．また出力$M$は割当ペアの集合を表している．
+    連続する2時刻分の検出された情報の対応付けは，割当問題として定式化することができる．割当問題とは，複数個のタスクと複数人の作業者を仮定し，作業者によってタスクの進行度が異なる場合に，全体の進行度を最適化するような問題のことである．物体検出の例であれば，タスクをある時刻$t-1$に検出されたバウンディングボックス群$B_{t-1}$，作業者を時刻$t$に検出されたバウンディングボックス群$B_{t}$とし，進行度をバウンディングボックス同士の距離の$-1$倍などにすれば，対応付けの最適化をすることができる．
 
-        \begin{algorithm}[t]
-            \caption{Hungarian Algorithm}
-            \label{alg:hungarian_algorithm}
-            \begin{algorithmic}[1]
-                \REQUIRE $A = \left\{a_1, a_2, \dots, a_n\right\}, B = \left\{b_1, b_2, \dots, b_m\right\}$
-                \ENSURE $M = \left\{(i, j) \mid Q^*_{ij} = 1 \mid i \in \left\{1, 2, \dots, n\right\}, j \in \left\{1, 2, \dots, m\right\}\right\}$
-                \STATE $\textbf{Initialize: } S \in \mathbb{R}_+^{\text{max}(n, m) \times \text{max}(n, m)}$
-                \FOR {$i = 0 \text{ to } \text{max}(n, m)$}
-                    \FOR {$j = 0 \text{ to } \text{max}(n, m)$}
-                        \IF {$ i \leq n \text{ and } j \leq m$}
-                            \STATE $S_{ij} \leftarrow f_{\text{score}}(a_i, b_j)$
-                        \ELSE 
-                            \STATE $S_{ij} \leftarrow 0$
-                        \ENDIF
-                    \ENDFOR
-                \ENDFOR
-                \STATE $Q^* = hungarian\_algorithm(S)$
-                \RETURN $\left\{(i, j) \mid Q^*_{ij} = 1 \mid i \in \left\{1, 2, \dots, n\right\}, j \in \left\{1, 2, \dots, m\right\}\right\}$
-            \end{algorithmic}
-        \end{algorithm}
+    ここで割当問題の定式化を行う．いま$n$人の作業者$a_1, a_2, \dots, a_n$と$n$個のタスク$b_1, b_2, \dots, b_n$があると仮定する．またある作業者$a_i$がタスク$b_j$を行った場合の進行度を表す$s_{ij}$およびすべての組み合わせを並べたスコア行列$s \in \mathbb{R}^{n \times n}$が与えられたとする．また一人の作業者には一つの仕事が割り当てられるとして，どの作業者にどのタスクが割り当てられたのかを示す割当行列$Q \in [0, 1]^{n \times n}$を最適化する対象とする．ここで割当行列の$(i,j)$成分である$q_{ij}$が$0$のとき，作業者$a_i$はタスク$b_j$を行わないことを示し，$1$であれば，タスク$b_j$が作業者$a_i$に割り当てられたことを示す．このとき割当問題は，
+    \begin{equation}
+        \label{eq:assignment_problem}
+        \begin{aligned}
+            &&\text{Minimize } &\sum _{(i, j)} s_{ij} q_{ij}  
+            \\ &&&\text{s.t.}\quad \sum_i q_{ij} = 1,\quad \forall j = 1, 2, \dots, n
+            \\ &&&\phantom{\text{s.t.}}\quad \sum_j q_{ij} = 1,\quad \forall i = 1,2,\dots, n
+        \end{aligned}
+    \end{equation}
+    と表される．ハンガリー法\cite{kuhn1955hungarian}は，このように表される最適化を高速に解くことができるアルゴリズムである．
 
-        \subsubsection{SORTのアルゴリズム}
-        ここからは，SORTの具体的な処理の流れを説明する．SORTでは，YOLOなどの物体検出によって得られたBounding-Boxの情報$\left[x, y, w, h\right]$を観測変数$\bm{o}_t$として，各物体の状態変数$\bm{s}_t$（式\ref{eq:sort_state}参照）の推定を行う．しかし，時刻$t$の画像の中には複数の物体が存在しうるため，どのBounding-Boxが時刻$t-1$まで追跡してきた物体のいずれかと同一であるかは分からない．そこで用いられるのがHungarian Algorithmによる対応付けである．これにより，時刻$t-1$まで追跡してきた個体と同一であるBounding-Boxにはその個体のIDが振られ，Kalman Filterの観測変数として利用される（図\ref{fig:sort}参照）．
+    ここまでは作業者とタスクの数が同一である場合の割当問題を考えてきたが，一般的な問題設定では作業者やタスクに余りがある場合も考えられる．すなわち$n$人の作業者に$m$個のタスクを割り当てる時に，$n \neq m$の場合もあり得る．しかしながらこれをそのまま式\ref{eq:assignment_problem}の形で記述し最適化を行うと，非整数な解，つまり一人に複数のタスクが割り当てられたり，一つのタスクを複数人で行うような解が出てきてしまう．しかしながら本問題設定のように対応付けを行いたい場合は式\ref{eq:assignment_problem}にさらに，
+    \begin{equation}
+        \label{eq:intger_assignment_constraint}
+        q_{ij} \in {0, 1} \quad \forall (i,j)
+    \end{equation}
+    という非連続的な整数条件を加えなければならない．
 
-        \begin{figure}[t]
-            \centering
-            \includegraphics[width=\linewidth]{fig/sort.pdf}
-            \caption[時刻$t=4$におけるSORTの処理の概略図]{時刻$t=4$におけるSORTの処理の概略図: SORTではBounding-Boxを観測変数として状態変数の推定を行う．このときに複数のBounding-Boxを同一個体へ割り当てるために対応付けを行う．図のように，対応付けは物体検出によって得たBouning-Boxと観測予測による予測Bouding-Box間で行う．図の例では，赤色と緑色の物体は状態更新が行われている．またどの予測Bounding-Boxとも対応づかなかったものは新しい個体として認識される（黄色）．}
-            \label{fig:sort}
-        \end{figure}
+    しかしこの問題は，新たにダミー作業者もしくはダミータスクを導入すれば，式\ref{eq:intger_assignment_constraint}を与えずに解決することができる．もし作業者が余る$n > m$の場合は$n-m$個のダミータスクを，タスクが余る$m > n$の場合は$m-n$人のダミー作業者を考え，これらに対応する要素が全て$0$のスコア行列をもとのスコア行列$S$に結合する．これにより進行度行列および割当行列は，$\max(n, m)$次の正方行列になり，割当行列の要素は必ず整数になる．さらにスコアの合計を最大化しているため，ダミー作業者およびダミータスクには，スコアの合計を最大化するように余ったタスクおよび作業者が割り当てられ，最適性は担保される．
 
-        アルゴリズム\ref{alg:sort}に時刻$t$におけるSORTの処理を示す．13行目における$active\_tracks$関数では，時刻$t$に状態更新が行われなかったトラック集合$\mathcal{T}_{t-1}/\mathcal{T}_t$の中から，連続で状態更新されなかった回数が$\sigma_a$より小さいものを出力する．これにより，重なり合いなどで見えなくなった個体も$\sigma_a$の間に復帰すれば追跡できるようになっている．
+    以上の議論より，割り当てたいそれぞれの集合の要素数が異なる場合にも，それらの対応付けに割当問題を適用でき，ハンガリー法によってその最適が得られる．アルゴリズム\ref{alg:hungarian_matching}に，集合$A$と集合$B$が得られた際に各要素の対応付けを行うアルゴリズムを示す．ただしアルゴリズムにおける$Q^*$は最適な場合の割当行列，$f_{\text{sim}}(a_i, b_j)$は要素$a_i$と要素$b_j$の類似度を返す関数を表している．また出力は，対応付けられた要素同士のインデックスのペア集合$M$である．
 
-        \begin{algorithm}[t]
-            \caption{SORT}
-            \label{alg:sort}
-            \begin{algorithmic}[1]
-                \REQUIRE $\mathcal{T}_{t-1} = \left\{ \left. T^{(i)}\right| i \in \mathcal{I}_{t-1}\right\} , \mathcal{B}_t = \left\{\left. B^{(j)} \in \mathbb{R}^{4}\right| j \in \left\{1,2,\dots,n\right\}\right\},\sigma_a$ 
-                \ENSURE $\mathcal{T}_t = \left\{ \left. T^{(i)}\right| i \in \mathcal{I}_{t} \right\}$
-                \STATE $\textbf{Initialize: } \mathcal{P}_t = \emptyset,\mathcal{T}_t = \emptyset, S_t^{\text{pred}} = \emptyset, S_t^{\text{init}} = \emptyset$
-                \FOR {$T^{(i)} \in \mathcal{T}_{t-1}$}
-                    \STATE $\hat{\bm{s}}_{t-1}^{(i)} = \text{GET}(T^{(i)},\hat{\bm{s}}_{t-1}^{(i)})$
-                    \STATE $\mathcal{P}_t \leftarrow \mathcal{P}_t \cup kalman\_predict(\hat{\bm{s}}_{t-1}^{(i)})$
-                \ENDFOR
-                \STATE $M = hungarian\_matching(\mathcal{P}_t, \mathcal{B}_t)$
-                \FOR {$(i, j) \in M$}
-                    \STATE $B^{(j)} = \text{GET}(\mathcal{B}_t, B^{(j)})$
-                    \STATE $\hat{\bm{s}}_t^{(i)} = kalman\_filtering(B^{(j)})$
-                    \STATE $T^{(i)} \leftarrow T^{(i)} \cup \hat{\bm{s}}_t^{(i)}$
-                    \STATE $S_t^{\text{pred}} \leftarrow S_t^{\text{pred}} \cup \hat{\bm{s}}_t^{(i)}$
-                    \STATE $S_t^{\text{init}} \leftarrow S_t^{\text{init}} \cup \text{GET}(T^{(i)}, \hat{\bm{s}}_{t_s}^{(i)})$
-                    \STATE $\mathcal{T}_t \leftarrow \mathcal{T}_t \cup T^{(i)}$
-                \ENDFOR
-                \STATE $\mathcal{T}_t \leftarrow active\_tracks(\mathcal{T}_{t-1} / \mathcal{T}_t, \sigma_a)$
-                \RETURN $\mathcal{T}_t, S_t^{\text{pred}}, S_t^{\text{init}}$
-            \end{algorithmic}
-        \end{algorithm}
+    \subsection{検出位置の予測手法：カルマンフィルタ}
+    \label{subsec:kalman_filter}
 
-    \subsection{既存手法適用における問題点}
-    本問題設定が既存手法における問題設定と大きく異なる点は，対象空間が３次元であり，時刻$t$における入力画像が一枚ではなく$n_s$枚あることである．これによって生じる問題点の一つ目は，追跡によって我々が得たい情報が異なることである．既存手法が対象にしている問題設定では，時刻$t_1$における個体$i$が時刻$t_2$におけるどの個体であるのか，といったことに興味がある．そのために対応付けが行われ，Kalman Filterは対応付けのためのBounding-Box予測の一手法として用いられていた．しかしながら我々の問題設定では，むしろKalman Filterの状態予測の方に興味がある．またここでいう状態変数とは，式\ref{eq:sort_state}のようなBounding-Boxの予備情報ではなく，式\ref{eq:discreation}で表せられる，３次元空間上の物理量である．すなわち，Kalman Filterの再設計が必要である．
-    \par
-    またこの設計に伴って，二つ目の問題が生じる．それが，観測変数をどのように得るか，という問題である．既存手法のSORTでは，一個体一時刻につき観測変数はBounding-Box一つに対応していた．もし仮に，複数のスライス画像のうちある一つのスライスを選び，その時系列画像データにYOLO+SORTを適用した場合には，Bounding-Boxの時系列データが得られる．しかしながら，この二次元空間の情報から前述した三次元空間の情報を推定することは原理的に困難である．すなわち三次元空間の物理量を推定するためには，図\ref{fig:existing_problem}のように必ず他のスライスの情報も観測変数に加えなければならない．すなわち，対応付けによってBounding-BoxにIDを割り振る際に，同時に他のスライス上のBounding-Boxにも共通のIDを割り振らなければならない．
+    SORT\cite{bewley2016simple}の対応付けでは，物体の検出情報の類似度として，IoUが使用される．しかしながらユークリッド距離やコサイン類似度などの評価指標と異なり，IoUはほとんどの場合$0$になってしまう，厳格な評価指標である．そのため対象物体の速度が大きい場合や相対的にFPSが低い場合（特に1フレームで物体の大きさ以上の距離を移動する場合）には，うまく対応付けることができない．
+
+    そこでSORTが利用するのがカルマンフィルタによる予測である．ReIDでは時刻$t$の処理において，それまでのReID結果$O_1, O_2, \dots, O_{t-1}$を得ている（\ref{alg:object_detection_and_reidentification}参照）．また前述のように，これをIDごとに分けることによって，各物体の時刻$t-1$までの軌跡を得ることができる．このデータをカルマンフィルタに入力することにより，時刻$t$において追跡をしている各物体の，時刻$t+1$における検出情報の予測を得る．そして時刻$t$の検出情報の代わりに，この予測情報を用いて対応付けを行う．これにより，速度を持った対象に対してもある程度対応付けが可能になる．
+
+    \subsubsection{カルマンフィルタの問題設定}
+    \label{subsubsec:kalmanfilter_setting}
+
+    カルマンフィルタ\cite{bishop2001introduction}とは，センサーなどから得られた時系列データを入力し，システム内部の状態を推定するための最適化アルゴリズムである．ここではセンサーから得られる観測変数の系列を$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$，システム内部の状態変数の系列を$\bm{s}_1, \bm{s}_2, \dots, \bm{s}_t$と表記する．カルマンフィルタの問題設定は，観測系列$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$が得られたときに状態変数$\bm{s}_t$の推定値$\hat{\bm{s}}_t$を最適化することである．またこの最適性は，
+    \begin{equation}
+        \label{eq:kalman_optimality}
+        \hat{\bm{s}}_t^* = \underset{\hat{\bm{s}}_t}{\text{argmin}} ~ \mathbb{E}\left[\left(\hat{\bm{s}}_t - \bm{s}_t\right)^2\right] - \mathbb{E}\left[\hat{\bm{s}}_t - \bm{s}_t\right]^2,
+    \end{equation}
+    すなわち推定誤差の分散最小化で与えられる．
+
+    この分散最小化を行うために，時刻$t$までの観測系列$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$を得たときの時刻$t$の状態変数$\bm{s}_t$の確率分布を考える．これはベイズの定理より，
+    \begin{equation}
+        \label{eq:posterior_with_bayes}
+        p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_t ) = \frac{p(\bm{o}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1}, \bm{s}_t) p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})}{p(\bm{o}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})}
+    \end{equation}
+    と書き下せる．また右辺の分子後半部$p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})$は条件付き確率の性質から，
+    \begin{equation}
+        \label{eq:posterior_with_conditioning}
+        p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1}) = \int p(\bm{s}_t \mid \bm{s}_{t-1}, \bm{o}_1, \dots, \bm{o}_{t-1}) ~ p(\bm{s}_{t-1} \mid \bm{o}_1, \dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
+    \end{equation}
+
+    式\ref{eq:posterior_with_bayes}と式\ref{eq:posterior_with_conditioning}より，$p(\bm{s}_0 \mid \bm{o}_0) = p(\bm{s}_0)$が与えられればすべての時刻$t = 1, 2, \dots, t$における$p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_t)$が理論上には計算することができる．しかしながら式\ref{eq:posterior_with_bayes}における分母や式\ref{eq:posterior_with_conditioning}における右辺には積分が含まれるため，現実には計算することができない．
+
+    そのため一般的なカルマンフィルタでは，システムや観測の線形性とマルコフ性，およびノイズの正規性を仮定する．すなわち，
+    \begin{equation}
+        \label{eq:kalman_GL}
+        \begin{aligned}
+            \bm{s}_{t+1} &= F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
+            \\ \bm{o}_t &= H_t \bm{s}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
+        \end{aligned}        
+    \end{equation}
+    を仮定する．上の式は状態遷移式，下の式は観測方程式と呼ばれる．ここで$F_t$は時刻$t$における状態変数の時間遷移を表す遷移行列，$H_t$は時刻$t$における状態から観測への変換を表す観測行列である．また$\bm{v}_t$はシステムに加えられるノイズ，$\bm{w}_t$は観測時に観測変数に加えられるノイズである．
+
+    以上の仮定により，時刻$t+1$の状態変数は時刻$t$の状態変数のみによって記述でき，また時刻$t$の観測変数も同様に時刻$t$の状態変数のみによって記述できる．すなわち，
+    \begin{equation}
+        \label{eq:kalman_with_markov}
+        \begin{aligned}
+            p(\bm{s}_{t} \mid \bm{s}_{t-1}, \bm{o}_1, \dots, \bm{o}_t) &= p(\bm{s}_t \mid \bm{s}_t)
+            \\p(\bm{o}_t \mid \bm{o}_1, \dots, \bm{o}_{t-1}, \bm{s}_t) &= p(\bm{o}_t \mid \bm{s}_t)
+        \end{aligned}
+    \end{equation}
+    が成り立つ．さらにこれらは式\ref{eq:kalman_GL}の各変数を用いると，
+    \begin{equation}
+        \label{eq:linear_transition_and_observation}
+        \begin{aligned}
+            p(\bm{s}_t \mid \bm{s}_{t-1}) &= \mathcal{N}(F_{t-1} \bm{s}_{t-1}, Q_{t-1})
+            \\ p(\bm{o}_t \mid \bm{s}_t) &= \mathcal{N}(H_t \bm{s}_{t}, R_t)
+        \end{aligned}
+    \end{equation}
+    のように正規分布の形で記述できる．
+
+    ここでカルマンフィルタの枠組みでは，時刻$0$における状態変数の事前分布$p(\bm{s}_0)$が正規性を持ち，$p(\bm{s}_0) = \mathcal{N}(\bm{\mu}_{0 \mid 0}, \Sigma_{0 \mid 0})$と仮定する．すると式\ref{eq:kalman_with_markov}はすべて正規分布同士の積で表すことができ，その結果もまた正規分布になることが保証される．よって，
+    \begin{equation}
+        \label{eq:normal_dist_representation}
+        \begin{aligned}
+            p(\bm{s}_t \mid \bm{o}1, \dots, \bm{o}_t)& = \mathcal{N}\left(\bm{\mu}_{t \mid t}, \Sigma_{t \mid t}\right)
+            \\ p(\bm{s}_{t+1} \mid \bm{o}1, \dots, \bm{o}_t) &= \mathcal{N}\left(\bm{\mu}_{t+1 \mid t}, \Sigma_{t+1 \mid t}\right)
+        \end{aligned}
+    \end{equation}
+    と表すと，これら平均と分散は式\ref{eq:kalman_GL}中の変数を用いて，
+    \begin{equation}
+        \label{eq:estimation_equations}
+        \begin{aligned}
+            \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1}
+            \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1}
+            \\\bm{\mu}_{t \mid t} &= \Sigma_{t \mid t} \left( H_t R_t^{-1} \bm{o}_t + \Sigma_{t \mid t-1}^{-1} \bm{\mu}_{t \mid t-1} \right)
+            \\\Sigma_{t \mid t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t \mid t-1}^{-1}\right)^{-1}
+        \end{aligned}
+    \end{equation}
+    と表され，計算可能になる．ただしここで$\bm{\mu}_{0 \mid 0}$および$\Sigma_{0 \mid 0}$はハイパーパラメータである．また一般的にはカルマンゲイン
+    \begin{equation}
+        \label{eq:kalman_gain}
+        K_t = \Sigma_{t \mid t-1} H_t^{\top} \left(H_t \Sigma_{t \mid t-1} H_t^{\top} + R_t\right)^{-1}
+    \end{equation}
+    を用いて，
+    \begin{equation}
+        \label{eq:estimation_equations_with_K}
+        \begin{aligned}
+            \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1}
+            \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1}
+            \\\bm{\mu}_{t \mid t} &= \bm{\mu}_{t \mid t-1} + K_t \left(\bm{o}_t - H_t \bm{\mu}_{t \mid t-1}\right)
+            \\\Sigma_{t \mid t} &= (I - K_t H_t) \Sigma_{t \mid t-1}
+        \end{aligned}                    
+    \end{equation}
+    と表される．
+
+    また$\bm{s}_t$が正規分布に従う場合，式\ref{eq:kalman_optimality}を満たす推定値は条件付き期待値，すなわち正規分布の第一引数になる．以上より観測系列$\bm{o}_1, \dots, \bm{o}_t$が得られたときの状態変数$\bm{s}_t$のカルマンフィルタの最適推定値は，式\ref{eq:estimation_equations_with_K}の$\bm{\mu}_{t \mid t}$で与えられる．
+
+    \subsubsection{カルマンフィルタによる状態推定と観測予測}
+
+    \begin{algorithm}[t]
+        \caption[Kalman Estimate]{Kalman Estimate}
+        \label{alg:kalman_estimate}
+        \begin{algorithmic}[1]
+            \Require $O = \left\{\bm{o}_t \mid t \in \mathcal{T} \subset \mathbb{N}_+\right\}, T$
+            \Ensure $\hat{\bm{s}}_T$
+            \State $\textbf{Initialize: } F, Q, H, R, \Sigma_{0 \mid 0}, \bm{\mu}_{0 \mid 0} = initial\_estimate()$
+            \For {$t = 1 \text{ to } T$}
+                \State $\bm{\mu}_{t \mid t-1} = F \bm{\mu}_{t-1 \mid t-1}$
+                \State $\Sigma_{t \mid t-1} = F \Sigma_{t-1 \mid t-1} F^{\top} + Q$
+                \State $\hat{\bm{s}}_t = \bm{\mu}_{t \mid t-1}$
+                \If {$ \bm{o}_t \in O $}
+                    \State $K_t = \Sigma_{t \mid t-1} H^{\top} \left( H \Sigma_{t \mid t-1} H^{\top} + R\right)$
+                    \State $\bm{\mu}_{t \mid t} = \bm{\mu}_{t \mid t-1} + K_t \left( \bm{o}_t - H \bm{\mu}_{t \mid t-1} \right)$
+                    \State $\Sigma_{t \mid t} = \left( I - K_t H \right) \Sigma_{t \mid t-1}$
+                    \State $\hat{\bm{s}}_t = \bm{\mu}_{t \mid t}$
+                \EndIf
+            \EndFor
+            \State \Return $\hat{\bm{s}}_T$
+        \end{algorithmic}
+    \end{algorithm}
+
+    \begin{algorithm}[t]
+        \caption[Kalman Predict]{Kalman Predict}
+        \label{alg:kalman_predict}
+        \begin{algorithmic}[1]
+            \Require $O = \left\{\bm{o}_t \mid t \in \mathcal{T} \subset \mathbb{N}_+\right\}, T$
+            \Ensure $\hat{\bm{o}}_T$
+            \State $\textbf{Initialize: } F, Q, H, R, \Sigma_{0 \mid 0}, \bm{\mu}_{0 \mid 0} = initial\_estimate()$
+            \For {$t = 1 \text{ to } T$}
+                \State $\bm{\mu}_{t \mid t-1} = F \bm{\mu}_{t-1 \mid t-1}$
+                \State $\Sigma_{t \mid t-1} = F \Sigma_{t-1 \mid t-1} F^{\top} + Q$
+                \State $\hat{\bm{o}}_t = H \bm{\mu}_{t \mid t-1}$
+                \If {$ \bm{o}_t \in O $}
+                    \State $K_t = \Sigma_{t \mid t-1} H^{\top} \left( H \Sigma_{t \mid t-1} H^{\top} + R\right)$
+                    \State $\bm{\mu}_{t \mid t} = \bm{\mu}_{t \mid t-1} + K_t \left( \bm{o}_t - H \bm{\mu}_{t \mid t-1} \right)$
+                    \State $\Sigma_{t \mid t} = \left( I - K_t H \right) \Sigma_{t \mid t-1}$
+                    \State $\hat{\bm{o}}_t = H \bm{\mu}_{t \mid t}$
+                \EndIf
+            \EndFor
+            \State \Return $\hat{\bm{o}}_T$
+        \end{algorithmic}
+    \end{algorithm}
+
+    式\ref{eq:estimation_equations_with_K}を用いて，時刻$T$までの観測系列$\bm{o}_1, \dots, \bm{o}_T$を入力として状態変数$\bm{s}_T$の推定を行うアルゴリズムをアルゴリズム\ref{alg:kalman_estimate}に示す．ただしここでは簡易化のため，状態遷移式および観測方程式における各変数は定常なものであるとした．またアルゴリズムに示すように，観測系列に抜け落ちがある場合でも，その時刻は式\ref{eq:posterior_with_bayes}に相当する処理を行わず，次の時刻の処理に移れば問題なく推定が可能である．
+
+    またカルマンフィルタでは，時刻$t$までの観測系列が得られたときに，時刻$t+1$の状態予測だけではなく，観測変数の予測も行うことができる．これを行うためには，式\ref{eq:estimation_equations_with_K}で計算される$\bm{s}_{t+1}$の期待値および分散と式\ref{eq:kalman_GL}の観測方程式から観測予測を行う．このアルゴリズムをアルゴリズム\ref{alg:kalman_predict}に示す．これは単に，アルゴリズム\ref{alg:kalman_estimate}の処理に観測行列$H$による変換を行っただけである（\ref{alg:kalman_predict}の10行目）．
+
+    \subsection{SORTのアルゴリズム}
+    \label{subsec:sort_algorithm}
+
+    \begin{algorithm}[t]
+        \caption[SORT]{SORT}
+        \label{alg:sort}
+        \begin{algorithmic}[1]
+            \Require $\mathcal{B} = \left\{B_t = \left\{\bm{b}_t^{(1)}, \bm{b}_t^{(2)}, \dots\right\} \mid t \in \left\{1, 2, \dots, T\right\}\right\}$
+            \Ensure $\mathcal{O}_T = \left\{O^{(i)} \mid i \in \mathcal{I}_T\right\}$
+            \State $\textbf{Initialize: } \mathcal{O}_{1} = \emptyset,\ \sigma_{\text{act}}$
+            \For {$\bm{b}_j \text{ in } B_1$}
+                \State $\text{add } O^{(j)} = \left\{\bm{b}_1^{(j)}\right\} \text{ to } \mathcal{O}_{1}$
+                \State $\text{add } j \text{ to }\mathcal{I}_1 $
+            \EndFor
+            \For {$t = 2 \text{ to } T$}
+                \State $\hat{B}_t = \emptyset,\ \mathcal{O}_t = \emptyset$
+                \For {$O^{(i)} \text{ in } \mathcal{O}_{t-1}$}
+                    \State $\hat{\bm{b}}_t^{(i)} = kalman\_predict(O^{(i)})$
+                    \State $\text{add } \hat{\bm{b}}_t^{(i)} \text{ to }\hat{B}_t $
+                \EndFor
+                \State $M_t = hungarian\_matching(\hat{B}_t, B_t)$
+                \For {$(i,j) \text{ in } M_t$}
+                    \State $\text{add } \bm{b}_t^{(j)} \text{ to } O^{(i)}$
+                    \State $\text{add } O^{(i)} \text{ to } \mathcal{O}_t$
+                    \State $\text{add } i \text{ to } \mathcal{I}_t$
+                \EndFor
+                % \For {$j \text{ in } N_t$}
+                %     \State $i_n = \max (\mathcal{I}_1 \cup \mathcal{I}_2 \cup \cdots \cup \mathcal{I}_{t-1}) + 1$
+                %     \State $\text{add } O_{i_n} = \left\{\bm{b}_t^{(j)}\right\} \text{ to } \mathcal{O}_{t}$
+                %     \State $\text{add } i_n \text{ to } \mathcal{I}_t$
+                % \EndFor
+                \For {$i \text{ in } \mathcal{I}_{t-1}$}
+                    \State $\sigma_i = calculate\_staleness(i, \mathcal{I}_1, \mathcal{I}_2, \dots, \mathcal{I}_t)$
+                    \If {$\sigma_i \leq \sigma_{\text{act}}$}
+                        \State $\text{add } O^{(i)} \text{ to } \mathcal{O}_t$
+                    \EndIf
+                \EndFor
+            \EndFor
+            \State \Return $\mathcal{O}_{T}$
+        \end{algorithmic}
+    \end{algorithm}
+
+    割当問題によって連続する二時刻のバウンディングボックス間対応付けを行う場合，直感的には類似度にバウンディングボックス同士の距離の$-1$倍や逆数を用いることは自然である．しかしながら連続する二時刻のバウンディングボックス間で，お互いに対応づかない別個体があるときには別個体の対応付けをしてしまう．なぜならばどれだけ距離が大きい場合でも，ダミーに対応付けられるよりは全体のスコアを上げるためである．またそういった対応付けを防ぐためにダミーに対するスコアを$0$より大きくするという対処法も考えられるが，この場合は正しい対応付けも排除してしまう可能性があり，値の微調整が必要になってしまう．
+
+    そこでSORTでは，類似度にIntersection of Union（以後IoUと表記する）を用いる．IoUは重なりあう領域がまったくない場合$0$になるため，非常に対応付けに保守的であり，間違った対応付けをしなくて済む．そして保守的になった分対応づきにくくなる問題に対しては，カルマンフィルタによるバウンディングボックスの予測によって解決する．もし仮に物体がフレームレートに対して大きい速度を持っている場合には，IoUは限りなく0になりやすくなってしまう．しかし速度や加速度を知っていれば時刻$t$のバウンディングボックスの位置を予測でき，速度などによらずIoUを高めることができる．すなわち速度や加速度を含んだ状態変数のカルマンフィルタを設計し，バウンディングボックスの予測を行う．
+
+    SORTでは，バウンディングボックスの状態変数を，位置，大きさ，そして位置の一階微分である速度で表す．すなわち時刻$t$における観測変数$\bm{o}_t$は，
+    \begin{equation}
+        \label{eq:sort_state_vector}
+        \bm{o}_t = \left[x, \dot{x}, y, \dot{y}, w, h\right]
+    \end{equation}
+    で表される．このとき遷移行列$F_t$は，線形関係式
+    \begin{equation}
+        \label{eq:sort_transition}
+        \begin{aligned}
+            x_{t+1} &= x_t + \dot{x}_t dt + \frac{1}{2} a_t dt^2
+            \\v_{t+1} &= \dot{x}_t + a_t dt
+            \\a_t &\sim \mathcal{N}(0, A_x)
+        \end{aligned}
+    \end{equation}
+    を満たすように設計される．ただし$a_t$は正規性をもつノイズであり，システムに対して加速度として加算される．また$A_x$はその分散を表す．ここでは冗長性のため$x$のみに対する関係を記述したが，$y$についても同様の関係が成り立つ．また観測行列$H_t$は，状態変数の$0$階微分成分をそのまま利用するように設計される．
+
+    SORTのアルゴリズムをアルゴリズム\ref{alg:sort}に示す．ただしここでの出力はIDごとの観測系列になっていることに注意されたい．アルゴリズム\ref{alg:object_detection_and_reidentification}でも示したように，Tracking-by-Detectionでは時刻$t$のReIDにおいて，時刻$t-1$までのReID結果$O_1, O_2, \dots, O_{t-1}$を得ている．これをIDごとに分ければ，各個体の軌跡，言い換えれば観測系列を得ることができる．これを用いてSORTは，時刻$t$のバウンディングボックス群$B_t$を得たときに，はじめに$B_t$の予測を行う（8-9行目）．そしてその予測バウンディングボックスと実際に検出されたバウンディングボックス群とでハンガリー法による対応付けを行う（12行目）．そして対応付けられたバウンディングボックスを軌跡$O^{(i)}$に加える（14-16行目）．また明瞭さのため省略したが，実際には対応づかなかった検出バウンディングボックスを新しいIDの個体とし，軌跡に加える．また18-19行目では，時刻$t-1$で追跡を行っている各物体に対して，何時刻対応付けがなかったのかを計算し，ある閾値$\sigma_{\text{act}}$以上の間対応付けがなかったものは追跡を止めている．
+
+    閾値$\sigma_{\text{act}}$は，検出の精度にも依存している．仮に物体検出で見逃し（FN）が多い場合には，この値を大きくする方が望ましい．しかし対象の個体数が多い場合には，別の個体が対応付けの候補になってしまうため注意が必要である．
+
+    \subsection{既存手法の問題点}
+    \label{subsec:existing_problem}
+
+    本問題設定と一般的なMOTおよびTracking-by-Detectionが対象にしている問題設定とで大きく異なる点は，対象空間が三次元空間でありながら，入力画像が二次元画像であり，画像が一枚ではなく$n_s$米あることである．これによって生じる問題点の一つ目は，追跡によってわれわれが得たい情報が異なることである．アルゴリズム\ref{alg:object_detection_and_reidentification}や\ref{alg:sort}に見られたように，一般的なMOTでの問題設定では，ある時刻に検出された物体が，他の時刻ではどの検出された物体なのか，ということに興味がある．そのためにSORTでは対応付けが行われており，カルマンフィルタは対応付けのための補助的な役割を果たしていた．しかしながらわれわれの問題設定では，むしろカルマンフィルタの出力に興味がある．なぜならば最終的に得たい情報は\ref{eq:discreted_state_vector}や\ref{eq:cell_state_prediction}で表されるような三次元情報であり，これらを求めるにはカルマンフィルタなどによる推定が必要であるためだ．よって本問題設定に適用するには，カルマンフィルタの状態変数や各種行列の再設計が必要である．
+
+    そして二つ目の問題が，その再設計されるカルマンフィルタの観測系列をどのように得るか，という問題である．状態変数を三次元情報にする場合，観測系列に何かしらの三次元的な情報がなければ精度良く推定することは非常に困難になる．しかしながら本節で説明してきた既存手法では，複数のスライス二次元画像入力に対して図\ref{fig:existing_problem}（左）に示すような単一のスライスに対応する検出および観測系列しか得られない．
 
     \begin{figure}[t]
         \centering
@@ -309,230 +416,279 @@
         \label{fig:existing_problem}
     \end{figure}
 
-    以降の節では，まず一つ目の問題に対処するためにSliceKalmanFilterという手法を提案する．またこのSliceKalmanFilterの観測系列を得る手法として，観測予測による対応付けとSORT+DepthSORTによる対応付けの二つの手法を提案する．
+    次節で説明する提案手法では，まず問題点の一つ目である三次元的な状態推定のためのカルマンフィルタの設計を行う．この設計では物体検出と理想的なReIDから得られる情報を観測変数，推定したい変数を状態変数とした非常に直感的な状態空間モデルを使用している．そして問題点の二つ目である三次元的な観測変数の獲得方法として，DepthSORTというアルゴリズムを組み合わせたReIDを提案する．このDepthSORTのアルゴリズム自体は既存手法の一部であるSORTと同様であり，発想自体も非常に単純である．このReID手法によって，図\ref{fig:existing_problem}（右）に示すような，一時刻に複数のバウンディングボックスを持った観測変数を得ることができる．
 
-\section{提案手法の設計思想}
-既存手法を本問題設定に適用するうえで生じる問題点を再掲する．
-\begin{enumerate}[label=(\arabic*)]
-    \item SORTでは観測系列にIDを割り振ることに重きを置くが，本問題設定では三次元空間の物理量で表せられる状態を推定したい．
-    \item (1)の状態を推定するために，複数のスライスにおけるBounding-Boxを観測系列に含めたい．
-\end{enumerate}
+\section{新しいカルマンフィルタの設計および三次元スライス画像のReID手法}
+\label{sec:proposed_method}
 
-まず(1)の問題に対処するために，Kalman Filterの状態変数と観測変数を三次元空間上における物理量を推定できるように書き換える．ここでは便宜上，このKalman Filterを特別にSliceKalmanFilterと呼ぶことにする．
+    本章では，はじめに提案手法の概要を述べた後，提案部分であるSliceKalmanFilterおよびSORT+DepthSORTによるReIDについて詳細に述べる．
+
+    提案手法では，既存手法と同様Tracking-by-Detectionの枠組みに則り，物体検出手法に関しては既存手法と同様YOLOを使用する．すなわち，スライス二次元画像入力$\mathcal{X}_t = \left\{X_{t, s} \mid s \in {1, \dots, n_s}\right\}$をそれぞれ独立にYOLOに入力し，それぞれバウンディングボックスの集合$B_{t,s} = \left\{\bm{b}_{t,s}^{(j)}\right\}$を得る．添字の$(t,s)$は，時刻$t$における$s$番目のスライスを表している．
+
+    続くReIDでは既存手法と異なり，複数のスライスに対応した$B_{t,1}, B_{t,2}, \dots, B_{t,n_s}$が入力となる．出力としては既存手法のReIDおよびSORTと同様に，各集合に含まれるすべてのバウンディングボックス$\bm{b}$にIDを与えたものが得られる．提案手法ではDepthSORTという高さ方向のSORTを実施することで同時刻のスライス間で対応付けを行う．これにより，後続のカルマンフィルタに三次元的な観測変数を渡すことができる．
+
+    最後に新たに設計を行うカルマンフィルタでは，異なるスライスに対応した複数のバウンディングボックスを観測変数として，三次元的な状態の推定を行う．このカルマンフィルタをSliceKalmanFilterと呼ぶこととする．この設計では，非線形な写像に対応するための拡張カルマンフィルタと，新たに提案する可変的な観測変数によって達成される．
+
+    以降の節では，前章で説明した問題点の順番に習い，まずはじめにSliceKalmanFilterの設計を行い，その後にSliceKalmanFilterの観測系列を得るためのReID手法の説明に移る．
+
+
+    \subsection{三次元スライス画像に対応したカルマンフィルタ}
+    \label{subsec:sliced_kalman_filter}
     
-\section{SliceKalmanFilterの設計}
-状態変数$\bm{s}_t$は式\ref{eq:discreation}にあるように，三次元空間上の物理量を用いて，
-\begin{equation}
-    \label{eq:skf_state}
-    \bm{s}_t = \left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]
-\end{equation}
-と定める．
-このとき状態遷移式は一般線形Kalman Filterと同様に，
-\begin{equation}
-    \bm{s}_{t+1} = F_t \bm{s}_t + \bm{v}_t,\quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
-\end{equation}
-で表され，遷移行列$F_t$は式\ref{eq:time_transition}を満たすように設計される．また半径$r_t$は定常であることを仮定している．
-\par
-一方観測変数は問題点(2)で述べたように，複数のスライスにおけるBounding-Boxでなければいけない．しかしここで一度，状態変数$\bm{s}_t$からあるスライス$s$のBounding-Box$\bm{o}_s$を出力する関数$h_s(\cdot)$を考える．すると$h_s(\bm{s}_t)$は，
-\begin{equation}
-    \label{eq:single_map}
-    h_s(\bm{s}_t) = \left\{
-        \begin{aligned}
-            &\left[x_{t'}, y_{t'}, 2\sqrt{r_{t'}^2 - \left(z_{t'} - z(s)\right)^2} \right]& &\quad \textbf{if }r_{t'} > \left| z_{t'} - z(s) \right|,
-            \\ &\text{None}& &\quad \textbf{else }
-        \end{aligned}
-    \right.
-\end{equation}
-と表せられる．ここで各変数の添字$t'$は，2.3節で述べた撮影にかかる時間差を考慮した時刻を表している．時刻$t$のあるスライス$s$が撮影される時刻は，$s=1$のスライスと比較して$s$分時間差が生じている．すなわち時間差を考慮した時刻$t'$は，
-\begin{equation}
-    \label{eq:time_with_lag}
-    t' = t + \frac{s-1}{n_s}
-\end{equation}
-で表せられることに注意されたい．
-
-式\ref{eq:single_map}は，，状態変数$\bm{s}_t$の値によって，予測する観測変数$H_t \bm{s}_t$の次元数が可変であることを示している．さらに当然ながら，個体の大きさやタイミングによってその個体が存在しないスライスが生じるため，得られる観測変数$\bm{o}_t$の次元数も可変である．しかし式\ref{eq:kalman_equations}に着目すると，これら二者の次元数は一致していなければならないことが分かる．
-\par
-以上の議論より，\ref{eq:single_map}において右辺の条件式$r_{t'} > \left| z_{t'} - z(s) \right|$を満たすスライスの集合を$\mathcal{S}^{\text{pred}}_t$，Bounding-Boxが観測されたスライスの集合を$\mathcal{S}_t^{\text{obs}}$として，観測変数を以下のように集合として定義する．
-\begin{equation}
-    \label{eq:skf_obs}
-    \begin{aligned}
-        \mathcal{O}_t &= \left\{\left.\bm{o}_s\right| s \in \mathcal{S}_t^{\text{pred}} \cap \mathcal{S}_t^{\text{obs}} \subset \left\{1,2,\dots,n_s\right\} \right\}
-        \\ \bm{o}_s &= \left[x_s, y_s, w_s, h_s\right]
-    \end{aligned}    
-\end{equation}
-またこのとき観測方程式は，式\ref{eq:single_map}を用いて，
-\begin{equation}
-    \label{eq:skf_obs_eq}
-    \bm{o}_s = h_s(\bm{s}_t) + \bm{w}_{t,s}, \quad \bm{w}_{t,s} \sim \mathcal{N}(\bm{0}, R_{t}),\quad \forall s \in \mathcal{S}_t^{\text{pred}} \cap \mathcal{S}_t^{\text{obs}}
-\end{equation}
-と表せられる．
-\par
-式\ref{eq:skf_obs_eq}では，観測変数と状態変数が非線形な関係$h_s(\cdot)$で結ばれている．このままでは前述のKalman Filterの演算を実行できないため，ExpandKalmanFilter（拡張カルマンフィルタ）の枠組みを利用する．まずは非線形な観測写像$h(\bm{s}_t)$の線形化を行うために，ある推定値$\hat{\bm{s}}_t$周りで一次Taylor展開を行って，
-\begin{equation}
-    \begin{aligned}
-        h(\bm{s}_t) &= h(\hat{\bm{s}}_t) + \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t=\hat{\bm{s}}_t} \left(\bm{s}_t - \hat{\bm{s}}_t\right) + \mathcal{O}(\bm{s}_t^2)
-        \\ &= \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t=\hat{\bm{s}}_t} \bm{s}_t + h(\hat{\bm{s}}_t) - \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t=\hat{\bm{s}}_t} \hat{\bm{s}}_t + \mathcal{O}(\bm{s}_t^2)
-    \end{aligned}
-\end{equation}
-と変形できる．ここで右辺第一項を$H_t \bm{s}_t$，第二項以降を$G_t \bm{u}_t$とおくと，式\ref{eq:linear_setting}の観測方程式と一致することが分かる．よって$H_t$を$\left.\partial h / \partial \bm{s}_t\right|_{\bm{s}_t=\hat{\bm{s}}_t}$，$H_t \bm{s}_t + G_t \bm{u}_t$を$h(\bm{s}_t)$とすれば一般線形Kalman Filterと同様の演算で推定値を求めることができる．またある推定値$\hat{\bm{s}}_t$には$\bm{\mu}_{t|t-1}$を用いればよい．
-
-\section{スライス３次元画像におけるReID}
-
-次に観測変数集合$\mathcal{O}_t$をどのように得るかを説明する．ここでの入力は，ある時刻$t$で取得された複数のスライス画像$\mathcal{X}_t$（\ref{eq:input_images}参照）を物体検出に入力して得られたBounding-Boxの集合$\mathcal{B}_t$である．ただしスライスが異なるBounding-Boxを区別するため，以下のような集合であるとする．すなわち$\mathcal{B}_{t,s}$が，時刻$t$のスライス$s$から得られたBounding-Boxの集合を表す．
-\begin{equation}
-    \label{eq:input_bboxes}
-    \begin{aligned}
-        \mathcal{B}_t &= \left\{\left.\mathcal{B}_{t,s}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}
-        \\\mathcal{B}_{t,s} &= \left\{\left.\bm{o}_{t,s}^{(i)}\right|i \in \mathbb{N}_{+}\right\}
-    \end{aligned}
-\end{equation}
-
-我々の目的は，この$\mathcal{B}_t$のうち，どのBounding-Boxが時刻$t-1$まで追跡してきた個体由来のものであるかを対応付けさせ，また対応づかないものには新しい追跡対象として新しいIDを付与することである．すなわちここでの出力$\mathcal{B}_t^{\text{reid}}$は，
-\begin{equation}
-    \begin{aligned}
-        \mathcal{B}_t^{\text{reid}} &= \left\{\left.\mathcal{O}_t^{(i)}\right| i \in \mathcal{I}_t\right\}
-        \\ \mathcal{O}_t^{(i)} &= \left\{\left.\bm{o}_{t,s}^{(i)}\right| s \in \mathcal{S}_t^{\text{obs},(i)} \subset \left\{1,2,\dots,n_s\right\}\right\}
-    \end{aligned}
-\end{equation}
-と表せられる．ここで$\mathcal{I}_t$は時刻$t$で追跡している個体IDの集合，$\mathcal{S}_t^{\text{obs},(i)}$は時刻$t$において個体$i$に対応付けられたBounding-Boxが検出されたスライスの集合である．
-\par
-$\mathbb{B}_t^{\text{reid}}$を得るための直感的な手法は，既存手法SORTと同様に，状態変数から各スライスで検出されるBouding-Boxを予測し，それらと実際に検出されたBounding-Boxを比較し，Hungarian Algorithmなどによって対応付ける手法である．まずはこちらの手法について説明する．
-
-    \subsection{SliceKalmanFilter予測によるマッチング}
-    時刻$t-1$までに$\left|\mathcal{I}_{t-1}\right|$個の個体を追跡できており，それぞれの状態変数推定値$\hat{\bm{s}}_{t-1}^{(i)}$を計算済みであると仮定する（ただし$i \in \mathcal{I}_{t-1}$）．
-    \par
-    式\ref{eq:single_map}によりこれらの状態変数から，時刻$t$に得られるBounding-Box集合$\mathcal{B}_t$に対応する予測集合$\mathcal{B}_t^{\text{pred}}$を得ることができる．すなわち，
+    既存手法におけるカルマンフィルタの役割は，対応付けに用いるバウンディングボックスを予測することであった．しかしながら本問題設定では，観測系列から直接得ることができない三次元情報を推定しなければならない．そこでわれわれは対応付け用のカルマンフィルタとは別に，SliceKalmanFilterと呼ばれる新たな状態推定用のカルマンフィルタを構築する．
+    
+    まずは状態変数を所望の三次元情報として設計する．すなわち式\ref{eq:discreted_state_vector}を参考にして，
     \begin{equation}
+        \label{eq:skf_state_vector}
+        \bm{s}_t = \left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]
+    \end{equation}
+    を状態変数とする．このとき状態遷移式は一般的なカルマンフィルタの状態遷移式\ref{eq:kalman_GL}と同様に，
+    \begin{equation}
+        \label{eq:skf_state_transition}
+        \bm{s}_{t+1} = F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
+    \end{equation}
+    で表され，遷移行列$F_t$は位置$(x,y,z)$に対して式\ref{eq:sort_transition}を満たすように設計される．また半径$r_t$は定常であると仮定する．
+
+    次に観測変数について設計を行うが，ここではまず単一のスライス$s$のみを考慮した観測変数$\bm{o}_{t, s}$を考える．この観測変数は当然ながら一つのバウンディングボックスを表すため，
+    \begin{equation}
+        \label{eq:single_slice_observation}
+        \bm{o}_{t, s} = \left[x_s, y_s, w_s, h_s\right]
+    \end{equation}
+    と表される．ここで\ref{sec:setting}章および式\ref{eq:appearant_radius}，\ref{eq:circle_region}で説明をした共焦点顕微鏡から得られる二次元スライス画像の特性を考慮すると，状態変数$\bm{s}_t$を入力して同時刻のスライス$s$に対する観測変数$\bm{o}_{t,s}$を返す関数$h_s(\cdot)$は，
+    \begin{equation}
+        \label{eq:single_slice_observation_map}
+        \begin{gathered}
+            h_s(\left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]) = \left[
+                \begin{aligned}
+                    x_s &= x_t + \dot{x}_t (s - 1) t_c
+                    \\ y_s &= y_t + \dot{y}_t (s - 1) t_c
+                    \\ w_s &= 2r_t^{\text{app}}
+                    \\ h_s &= 2r_t^{\text{app}}
+                \end{aligned}
+                \right]
+            \\  ,\textbf{where } r_t^{\text{app}} = \sqrt{r_t^2 - \left\{(s - 1)\delta z - \left(z_t + \dot{z}_t (s - 1) t_c\right) \right\}^2}
+        \end{gathered}
+    \end{equation}
+    で表される．ただし$t_c, \delta z$は\ref{sec:setting}章で説明した，それぞれ共焦点顕微鏡から一枚の二次元スライス画像を得るのに要する時間と各スライスの間隔の大きさを表している．また$r_t^{\text{app}}$は，スライス$s$に状態変数が$\bm{s}_t$である物体が映る際の見かけの半径を表している．
+
+    この式の注意すべき点は二つある．一つはこの観測変数と状態変数の関係が非線形な関係にあることである．式\ref{eq:kalman_GL}で仮定したように，一般的なカルマンフィルタではこの両者の関係に線形性を仮定していたため，何かしらの拡張が必要である．よって提案手法では，拡張カルマンフィルタ\cite{bishop2001introduction}を利用する．また注意すべき二つ目の点は，式\ref{eq:single_slice_observation_map}において，見かけの半径$r_t^{\text{app}}$の右辺の中身が$0$より大きくなければ，そもそも観測変数$\bm{o}_{t,s}$が存在し得ないことである．これについては，拡張カルマンフィルタの説明のあとに詳細を述べる．
+
+        \subsubsection{拡張カルマンフィルタ}
+        拡張カルマンフィルタ\cite{bishop2001introduction}は，システムの状態遷移や観測方程式が非線形な式の場合にも対応できる非線形カルマンフィルタの一種である．ここでは提案手法のための説明として，状態変数から観測変数への変換が非線形な関係$h(\cdot)$で結ばれ，観測方程式が，
+        \begin{equation}
+            \label{eq:ekf_nonlinear}
+            \bm{o}_t = h(\bm{s}_t) + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
+        \end{equation}
+        で表される場合を想定する．
+
+        非線形カルマンフィルタでは，非線形な関係をある状態推定値$\hat{\bm{x}}_t$周りのテーラー展開を行い，線形化を行う．すなわち非線形関数$h(\bm{s}_t)$を，
+        \begin{equation}
+            \label{eq:ekf_linearization}
+            \begin{aligned}
+                h(\bm{s}_t) &\approx h(\hat{\bm{x}}_t) + \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t = \hat{\bm{s}}_t} (\bm{s}_t - \hat{\bm{s}}_t)
+                \\ &= \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t = \hat{\bm{s}}_t} \bm{s}_t + h(\hat{\bm{s}}_t) - \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t = \hat{\bm{s}}_t} \hat{\bm{s}}_t
+            \end{aligned}
+        \end{equation}
+        と近似する．ここで仮観測変数
+        \begin{equation}
+            \label{eq:ekf_new_observation}
+            \bm{z}_t = \bm{o}_t - h(\hat{\bm{x}}_t) + \left.\frac{\partial h}{\partial \bm{s}_t}\right|_{\bm{s}_t = \hat{\bm{s}}_t} \hat{\bm{s}}_t
+        \end{equation}
+        を定義すると，式\ref{eq:ekf_nonlinear}は，
+        \begin{equation}
+            \label{eq:ekf_linearization_with_z}
+            \bm{z}_t = H'_t \bm{s}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t) 
+        \end{equation}
+        と表現できる．また$\bm{z}_t$は実際の観測変数$\bm{o}_t$と既知の推定値$\hat{\bm{s}}_t$から計算できる．よってこの仮観測変数を線形カルマンフィルタにおける観測変数としてアルゴリズム\ref{alg:kalman_estimate}を利用すれば，非線形の場合でも状態変数の推定が可能である．また状態変数から観測変数に写像する関数$h$も既知であるため，アルゴリズム\ref{alg:kalman_predict}によって観測変数の予測も可能である．推定値$\hat{\bm{s}}_t$には，時刻$t-1$までの観測変数が得られたときの時刻$t$の状態変数の条件付き期待値$\bm{\mu}_{t \mid t-1}$が用いられる．
+
+            \subsubsection{可変的な観測変数}
+
+            三次元の状態変数を推定するためには，観測変数にも三次元的な情報が含まれなくてはならない．すなわち本問題設定では，複数のスライスにおけるバウンディングボックスがその観測変数に当たる．しかしながら式\ref{eq:single_slice_observation_map}からも分かる通り，ある物体が映り込むスライスの数は，その時刻における状態変数$\bm{s}_t$に依存して変化する．また実際には物体検出器から得られるバウンディングボックスが入力になるため，理想的には検出されるはずが抜け落ちてしまい，検出が起きたスライスの数が変化する．
+
+            一方カルマンフィルタにおける状態推定では，観測変数$\bm{o}_t$と観測予測$H_t\bm{\mu}_{t \mid t-1}$の形状が一致していなければならない（式\ref{eq:estimation_equations_with_K}参照）．これはすなわち，カルマンフィルタの状態推定には，それまでの時刻から予測される推定値と実際の観測値の両方が要求されることを示している．
+
+            以上の議論によりSliceKalmanFilterでは，時刻$t-1$までの観測変数から推定された時刻$t$の観測変数が存在するスライスと時刻$t$の観測によって得られた観測変数のスライスとの共通集合を利用して状態変数を推定する．時刻$t-1$までの観測変数から推定された時刻$t$のバウンディングボックスの集合
+            \begin{equation}
+                \label{eq:sliced_bounding_boxes}
+                \hat{O}_t = \left\{\hat{\bm{b}}_{t, s} \mid  s \in \mathcal{S}_t^{\text{pred}}\right\}
+            \end{equation}
+            と，時刻$t$のバウンディングボックスの集合を表す
+            \begin{equation}
+                \label{eq:observed_bounding_boxes}
+                O_t = \left\{\bm{b}_{t,s} \mid s \in \mathcal{S}_t^{\text{obs}}\right\}
+            \end{equation}
+            が得られたと仮定する．ここでは$\mathcal{S}_t^{\text{pred}}$が推定されたバウンディングボックスが存在するスライスの集合，$\mathcal{S}_t^{\text{obs}}$が検出から得られたバウンディングボックスが存在するスライスの集合を表す．最終的な観測変数$\bm{o}_t$はこれらの情報を用いて，
+            \begin{equation}
+                \label{eq:skf_observation}
+                \bm{o}_t = \text{Concat.}\left(\left\{\bm{b}_{t,s} \mid s \in \mathcal{S}_t^{\text{pred}} \cup \mathcal{S}_t^{\text{obs}}\right\}\right)
+            \end{equation}
+            で表される．ここでConcat.は，集合の要素を一次元のベクトルに並べる操作である．またこれに応じて状態変数から観測変数をえる写像$h(\bm{s}_t)$は式\ref{eq:single_slice_observation_map}を用いて，
+            \begin{equation}
+                \label{eq:skf_observation_map}
+                h(\bm{s}_t) = \text{Concat.}\left(\left\{h_s(\bm{s}_t) \mid s \in \mathcal{S}_t^{\text{pred}} \cup \mathcal{S}_t^{\text{obs}}\right\}\right)
+            \end{equation}
+            で表される．
+
+    \subsection{三次元スライス画像に対応したReID}
+    \label{subsec:re-identificataion_for_slice}
+
+    次に，時刻$t$にYOLOから得られた二次元スライス画像に対応するバウンディングボックス集合$B_{t, 1}, B_{t, 2}, \dots, B_{t, n_s}$から各物体の観測変数$\left\{\bm{b}_{t, s} \mid s \in \mathcal{S}_t^{\text{obs}}\right\}$を得るためのReID手法，SORT+DepthSORTを述べる．
+
+    まず時刻$t-1$までに，追跡対象である各物体$i$に対して以下のような観測系列$O^{(i)}$が得られていると仮定する．
+    \begin{equation}
+        \label{eq:tracks_on_reid}
         \begin{aligned}
-            \mathcal{B}_t^{\text{pred}} &= \left\{\left.B_{t,s}^{\text{pred}}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}
-            \\ B_{t,s}^{\text{pred}} &= \left\{\left.\bm{o}_{t,s}\right| \bm{o}_{t,s} \in \mathcal{P}_{t,s} \subset \mathcal{P}_t\right\}
-            \\ \mathcal{P}_t &= \bigcup_{i \in \mathcal{I}_{t-1}} \left\{\left.h_s(\hat{\bm{s}}_{t-1})\right| s \in \mathcal{S}_{t-1}^{\text{pred},(i)}\right\}
+            O^{(i)} &= \left\{\bm{b}_{t',s}^{(i)} \mid (t', s) \in \mathcal{M}^{(i)}\right\}
         \end{aligned}
     \end{equation}
-    ここで$\mathcal{P}_{t,s}$は予測されたBounding-Box集合$\mathcal{P}_t$のうちスライス$s$における予測の集合，$\mathcal{S}_{t-1}^{\text{pred},(i)}$は時刻$t-1$において個体$i$の状態変数推定値$\bm{s}_{t-1}^{(i)}$が式\ref{eq:single_map}の右辺の条件式を満たすことができるスライスの集合を表している．
-    \par
-    これらスライスごとの予測集合$\mathcal{P}_{t,s}$と観測集合$\mathcal{B}_{t,s}$があれば，SORTと同様にHungarian Algorithmによる対応付けが可能である．以上の流れをアルゴリズム\ref{alg:skf_matching}に示す．
-    \begin{algorithm}[t]
-        \caption{Sliced-ReID by SKF's Prediction}
-        \label{alg:skf_matching}
-        \begin{algorithmic}[1]
-            \REQUIRE $\mathcal{T}_{t-1} = \left\{ \left. T^{(i)}\right| i \in \mathcal{I}_{t-1}\right\} , \mathcal{B}_t = \left\{\left. \mathcal{B}_{t,s} \right| s \in \left\{1,2,\dots,n_s\right\}\right\},\sigma_a$ 
-            \ENSURE $\mathcal{B}_t^{\text{reid}} = \left\{\left.\mathcal{O}_t^{(i)}\right|i \in \mathcal{I}_t\right\}$
-            \STATE $\textbf{Initialize: } \mathcal{T}_t = \emptyset, \mathcal{I}_t = \emptyset,\mathcal{P}_{t,1} = \mathcal{P}_{t,2}=\dots=\mathcal{P}_{t,n_s} = \emptyset$
-            \FOR {$T^{(i)} \text{ in } \mathcal{T}_{t-1}$}
-                \FOR {$s = 1 \text{ to } n_s$}
-                    \STATE $\hat{\bm{s}}_{t-1}^{(i)} = \text{GET}(T^{(i)}, \hat{\bm{s}}_{t-1}^{(i)})$
-                    \STATE $\mathcal{P}_{t,s} \leftarrow \mathcal{P}_{t,s} \cup h_s(\hat{\bm{s}}_{t-1}^{(i)})$
-                \ENDFOR
-            \ENDFOR
-            \FOR {$s = 1 \text{ to } n_s$}
-                \STATE $M_{t,s} = hungarian\_matching(\mathcal{P}_{t,s}, \mathcal{B}_{t,s})$
-                \FOR {$(i,j) \text{ in } M_{t,s}$}
-                    \STATE $\bm{o}_{t,s}^{(j)} = \text{GET}(\mathcal{B}_{t,s})$
-                    \STATE $\mathcal{O}_t^{(i)} = \left\{\bm{o}_{t,s}^{(j)}\right\} \textbf{ if } \mathcal{O}_t^{(i)} \text{ is undefined} \textbf{ else } \mathcal{O}_t^{(i)} \leftarrow \mathcal{O}_t^{(i)} \cup \bm{o}_{t,s}^{(j)}$
-                    \STATE $\mathcal{I}_t \leftarrow \mathcal{I}_t \cup i$
-                \ENDFOR
-            \ENDFOR
-            \RETURN $\left\{\left.\mathcal{O}_t^{(i)}\right|i \in \mathcal{I}_t\right\}$
-        \end{algorithmic}
-    \end{algorithm}
+    ここで$\mathcal{M}^{(i)}$は，各画像を特徴づける時刻とスライスのペアを表す集合であり，時刻$t-1$までにその各画像内で物体$i$に対応付けられたバウンディングボックスの集合を表す．
 
-    また時刻$t=1$における対応付では，（保留！！KFの方も書き換えなきゃ）
-    \par
-    しかしながらこの手法には懸念点が一つある．それは，式\ref{eq:skf_obs}において観測変数の集合を構築する際に，予測が存在するスライス集合$\mathcal{S}_t^{\text{pred}}$と観測が存在するスライス集合$\mathcal{S}_t^{\text{obs}}$の積集合にのみ着目している点である．これにより，物体検出の偽陰性や状態変数の推定に大きな誤差があったときに観測変数の情報は希薄になってしまい，さらなる推定精度の低下に繋がりかねない．
-    \par
-    この懸念点に対応するために，SORTのような二次元空間における物体追跡情報を利用した手法を次節で提案する．
+        \subsubsection{スライスごとの対応付け}
 
-    \subsection{SORT+DepthSORTによるマッチング}
-    SliceKalmanFilterの観測予測による対応付けでは，一度状態変数を推定した後，その推定値をもとにBounding-Boxの位置を予測して対応付けに利用していた．しかしながら対応付けを考えるうえでは，単一スライスに着目して一時刻前のBounding-Boxを参照したり，もしくは単一時刻における上下のスライスのBounding-Boxを参照したりした方がより直感的であり，より有効である可能性がある．特に状態変数の推定の精度が低い場合には，単一スライスや単一時刻の別スライスに着目したほうが予測は安定する．
-    \par
-    以上の議論から本節では，状態推定と対応付けに利用するKalman Filterを区別し，既存手法のSORTを拡張することでより安定したBounding-Boxの予測を目指した手法を提案する．
-    \par
-    既存手法のSORTは，時刻$1$から$t-1$までの観測系列から時刻$t$のBounding-Boxを予測し，対応付けに利用していた．単一のスライスに着目すれば，ただ一つのBounding-Boxの変位及び速度そのものを推定するため，前述のSliceKalmanFilterよりも安定した予測が可能である．しかしながらこの手法のみでは，各スライスで追跡されている個体同士の対応付けができない．
-    \par
-    そこでここでは，深さ方向へSORTを適用する．すなわち時刻$t$のBounding-Box集合$\mathcal{B}_t$（式\ref{eq:input_bboxes}参照）が得られた時に，$s=1$のBounding-Box集合$\mathcal{B}_{t,s=1}$を初期時刻の入力，$s=n_s$のBounding-Box集合$\mathcal{B}_{t,s=n_s}$を終了時刻の入力とみなしたSORTを実施する．このアルゴリズムをDepthSORTと呼ぶこととする．これにより同一個体由来のBounding-Boxには同じIDが割り振られるため，個体ごとのBounding-Box集合$\mathcal{B}_t^{DS} = \left\{\left.\mathcal{B}_t^{DS, (j)}\right|j \in \mathcal{I}_t^{DS}\right\}$に分けることができる．ここで$\mathcal{I}_t^{DS}$はDepthSORTによりBounding-Boxを仕分けた際の臨時個体IDの集合を表す．このDepthSORTのアルゴリズムをアルゴリズム\ref{alg:DepthSORT}に示す．
-    \begin{algorithm}[t]
-        \caption{DepthSORT}
-        \label{alg:DepthSORT}
-        \begin{algorithmic}[1]
-            \REQUIRE $\mathcal{B}_t = \left\{\left.\mathcal{B}_{t,s}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}, \sigma_a$
-            \ENSURE $\mathcal{B}_t^{DS} = \left\{\left.\mathcal{B}_t^{DS, (j)}\right|j \in \mathcal{I}_t^{DS}\right\}$
-            \STATE $\textbf{Initialize: } \mathcal{P}_s = \emptyset, \mathcal{B}_t^{DS}=\emptyset$
-            \FOR {$\bm{o}^{(j)} \text{ in } \mathcal{B}_{t,s=1}$}
-                \STATE $\mathcal{B}_t^{DS, (j)} = \left\{\bm{o}^{(j)}\right\}$ 
-                \STATE $\mathcal{B}_t^{DS} \leftarrow \mathcal{B}_t^{DS} \cup \mathcal{B}_t^{DS, (j)}$
-            \ENDFOR
-            \FOR {$s = 2 \text{ to } n_s$}
-                \FOR {$ \mathcal{B}_t^{DS, (j)} \text{ in }\mathcal{B}_t^{DS}$}
-                    \STATE $\mathcal{P}_s \leftarrow \mathcal{P}_s \cup kalman\_predict(\mathcal{B}_t^{DS, (j)})$
-                \ENDFOR
-                \STATE $M_{s} = hungarian\_matching(\mathcal{P}_s, \mathcal{B}_{t,s})$
-                \FOR {$(i,j) \text{ in } M_s$}
-                    \STATE $\bm{o}^{(j)} = \text{GET}(\mathcal{B}_{t,s})$
-                    \STATE $\mathcal{B}_t^{DS,(i)} \leftarrow \mathcal{B}_t^{DS,(i)} \cup \bm{o}^{(j)}$
-                \ENDFOR
-                \STATE $\mathcal{B}_t^{DS} \leftarrow active\_tracks(\mathcal{B}_t^{DS}, \sigma_a)$
-            \ENDFOR
-            \RETURN $\mathcal{B}_t^{DS}$
-        \end{algorithmic}
-    \end{algorithm}
+        提案するReIDでは，まず既存手法のSORTと同様の操作をスライスごとに行う．すなわち，あるスライス$s$に対して，観測予測集合
+        \begin{equation}
+            \label{eq:slice_wise_prediction}
+            \hat{B}_{t, s} = \left\{kalman\_predict\left(\left\{\bm{b}_{t', s}^{(i)} \mid (t', s) \in \mathcal{M}^{(i)}\right\}, t\right) \mid i \in \mathcal{I}_{t-1}\right\}
+        \end{equation}
+        を計算する．ここで$\mathcal{I}_{t-1}$は時刻$t-1$時点で追跡対象である物体のID集合である．そしてこれらのバウンディングボックスとスライス$s$に相当する観測集合$B_{t,s}$を比較することで対応付けを実施し，一時的にIDが振られた観測集合が得られる．すべてのスライスについてこのスライスごとの対応付けを行うことで得られる観測集合$\mathcal{O}_{\text{sort}}$は，
+        \begin{equation}
+            \label{eq:sort_identified_bboxes}
+            \mathcal{O}_{\text{sort}} = \left\{O_{\text{sort}}^{(i)} \mid i \in \mathcal{I}_{t-1}\right\}
+        \end{equation}
+        のように表され，$O_{\text{sort}}^{(i)}$はスライスごとの対応付けで物体$i$に対応付けられた時刻$t$におけるバウンディングボックスの集合を表す．
+        
+        この予測，対応付け，IDを振られたバウンディングボックスの出力，という流れはSORTと完全に一致している．しかしながら，このスライスごとの対応付けのみでは，全時刻$t-1$で検出されたスライスのみでしか新しいバウンディングボックスを得ることができない．すなわち物体が$z$方向に移動している場合は，その動きに追従することができなくなってしまう．そこで提案手法では，スライス間の対応付けを可能にするDepthSORTという処理を加える．
 
-    しかしDepthSORTだけでは，時刻$t-1$まで追跡してきた個体IDの集合$\mathcal{I}_{t-1}$と$\mathcal{I}_t^{DS}$は対応づいていない．そのため，最後にSORTとDepthSORTの結果を統合することでこれらのIDを対応付け，最終的な出力$\mathcal{B}_t^{\text{reid}}$を得る．
-    \par
-    ここで新たに，対応付けのための個体$i$の追跡情報を$S_t^{(i)}$と表し，これは二次元的な各スライスの状態変数推定値の集合だとする．すなわち，
-    \begin{equation}
-        \begin{aligned}
-            S_t^{(i)} &= \left\{\left.\hat{\bm{s}}_{t,s}^{(i)}\right| s \in \mathcal{S}^{\text{bbox}}_t\right\}
-        \end{aligned}
-    \end{equation}
-    と表せられる．ここで$\mathcal{S}_t^{\text{bbox}}$は，ある個体$i$が時刻$t$において検出されているスライスの集合を表す．つまり状態推定用のKalman Filterとは異なり，スライスごとに状態変数を保持している．またこの式における状態変数は三次元空間上の物理量で表されるものではなく，二次元的なBounding-Boxから得られる物理量で表されるものである．
-    \par
-    まずはこれらの各スライスの状態推定値を用いて，時刻$t$のBounding-Boxの予測$\mathcal{B}_t^{\text{pred}}$を構築する．ただしこれらは以下のようにスライスごとの状態推定値から計算される．
-    \begin{equation}
-        \begin{aligned}
-            \mathcal{B}_t^{\text{pred}} &= \left\{\left.\mathcal{B}_{t,s}^{\text{pred}}\right|s \in \left\{1,2,\dots,n_s\right\}\right\}
-            \\ \mathcal{B}_{t,s}^{\text{pred}} &= \left\{\left.kalman\_predict(\hat{\bm{s}}_{t-1,s}^{(i)})\right|i \in \mathcal{I}_{t-1}\right\}
-        \end{aligned}
-    \end{equation}
-    ここからはSliceKalmanFilterの対応付けと同様に，スライスごとに予測と観測の対応付けを行い，IDが割り振られたBounding-Box集合$\mathcal{B}_t^{S}$を得る．
-    \par
-    最後に，DepthSORTによって得られたBounding-Box集合$\mathcal{B}_t^{DS}$とSORTによって得られたBounding-Box集合$\mathcal{B}_t^{S}$の対応付けを行い，追跡してきた個体のIDであるSORT側のIDをDepthSORTの集合へ割り当てる．ここでは$\mathcal{B}_t^{S, (i)}$と$\mathcal{B}_t^{DS, (j)}$がいくつ共通のBounding-Boxを持っているかの個数をHungarian Matchingで用いるスコア行列の$ij$成分とする．
-    以上の流れをアルゴリズム\ref{alg:SORT+DepthSORT}にまとめる．また，図\ref{fig:sort+depthsort}に本手法の概略図を示す．
+        \subsubsection{深さ方向に対するSORT適用}
 
-    \begin{algorithm}[t]
-        \caption{SORT+DepthSORT}
-        \label{alg:SORT+DepthSORT}
-        \begin{algorithmic}[1]
-            \REQUIRE $S_{t-1} = \left\{\left.S_{t-1}^{(i)}\right| i \in \mathcal{I}_{t-1}\right\}, \mathcal{B}_t = \left\{\left.\mathcal{B}_{t,s} \right| s \in \left\{1, 2, \dots, n_s\right\}\right\}$
-            \ENSURE $\mathcal{B}_t^{\text{reid}} = \left\{\left.\mathcal{O}_t^{(i)}\right|i \in \mathcal{I}_t\right\}$
-            \STATE $\textbf{Initialize: } \text{あとまわし}$
-            \FOR {$s = 1 \text{ to } n_s$}
-                \STATE $\mathcal{P}_{t,s} = \emptyset$
-                \FOR {$S_{t-1}^{(i)} \text{ in } S_{t-1}$}
-                    \STATE $\hat{\bm{s}}_{t,s}^{(i)} = \text{GET}(S_{t-1}^{(i)})$
-                    \STATE $\mathcal{P}_{t,s} \leftarrow \mathcal{P}_{t,s} \cap kalman\_predict(\hat{\bm{s}}_{t,s}^{(i)})$
-                \ENDFOR
-                \STATE $M_{t,s} = hungarian\_matching(\mathcal{P}_{t,s}, \mathcal{B}_{t,s})$
-                \FOR {$(i,j) \text{ in } M_{t,s}$}
-                    \STATE $\bm{o}_{t,s}^{(j)} = \text{GET}(\mathcal{B}_{t,s})$
-                    \STATE $\mathcal{B}_t^{S,(i)} = \left\{\bm{o}_{t,s}^{(j)}\right\} \textbf{ if } \mathcal{B}_t^{S,(i)} \text{ is undefined} \textbf{ else } \mathcal{B}_t^{S,(i)} \leftarrow \mathcal{B}_t^{S,(i)} \cap \bm{o}_{t,s}^{(j)}$
-                    \STATE $\mathcal{I}_t^{S} \leftarrow \mathcal{I}_t^{S} \cap i$
-                \ENDFOR
-                \STATE $\mathcal{B}_t^{S} = \left\{\left.\mathcal{B}_t^{S,(i)}\right|i \in \mathcal{I}_t^{S}\right\}$
-            \ENDFOR
-            \STATE $\mathcal{B}_t^{DS} = depth\_sort(\mathcal{B}_t, \sigma_a)$
-            \STATE $M_{(S,DS)} = hungarian\_matching(\mathcal{B}_t^{S}, \mathcal{B}_t^{DS})$
-            \FOR {$(i,j) \text{ in } M_{(S,DS)}$}
-                \STATE $\mathcal{O}_t^{(i)} = \mathcal{B}_t^{DS, (j)}$
-                \STATE $\mathcal{I}_t \leftarrow \mathcal{I}_t \cap i$
-            \ENDFOR
-            \RETURN $\left\{\left.\mathcal{O}_t^{(i)}\right| i \in \mathcal{I}_t\right\}$
-        \end{algorithmic}
-    \end{algorithm}
+        \begin{algorithm}[t]
+            \caption[DepthSORT]{DepthSORT}
+            \label{alg:depth_sort}
+            \begin{algorithmic}[1]
+                \Require $\mathcal{B} = \left\{B_s = \left\{\bm{b}_s^{(1)}, \bm{b}_s^{(2)}, \dots\right\} \mid s \in \left\{1, 2, \dots, n_s\right\}\right\}$
+                \Ensure $\mathcal{O} = \left\{O^{(i)} \mid i \in \bigcup_{s=1}^{n_s} \mathcal{I}_{s}\right\}$
+                \State $\textbf{Initialize: } \mathcal{O}_{\text{act}} = \emptyset,\ \mathcal{O}_{\text{non-act}} = \emptyset,\ \sigma_{\text{act}}$
+                \For {$\bm{b}_1^{(j)} \text{ in } B_1$}
+                    \State $\text{add } O^{(j)} = \left\{\bm{b}_1^{(j)}\right\} \text{ to } \mathcal{O}_{\text{act}}$
+                    \State $\text{add } j \text{ to }\mathcal{I}_1$
+                \EndFor
+                \For {$s = 2 \text{ to } n_s$}
+                    \State $\hat{B}_s = \emptyset$
+                    \For {$O^{(i)} \text{ in } \mathcal{O}_{\text{act}}$}
+                        \State $\hat{\bm{b}}_s^{(i)} = kalman\_predict(O^{(i)})$
+                        \State $\text{add } \hat{\bm{b}}_s^{(i)} \text{ to }\hat{B}_s $
+                    \EndFor
+                    \State $M_s = hungarian\_matching(\hat{B}_s, B_s)$
+                    \For {$(i,j) \text{ in } M_s$}
+                        \State $\text{add } \bm{b}_s^{(j)} \text{ to } O^{(i)}$
+                        \State $\text{add } i \text{ to } \mathcal{I}_s$
+                    \EndFor
+                    \For {$i \text{ in } \mathcal{I}_{s-1}$}
+                        \State $\sigma_i = calculate\_staleness(i, \mathcal{I}_1, \mathcal{I}_2, \dots, \mathcal{I}_s)$
+                        \If {$\sigma_i > \sigma_{\text{act}}$}
+                            \State $\text{remove } O^{(i)} \text{ from } \mathcal{O}_{\text{act}}$
+                            \State $\text{add } O^{(i)} \text{ to } \mathcal{O}_{\text{non-act}}$
+                        \EndIf
+                    \EndFor
+                \EndFor
+                \State \Return $\mathcal{O}_{\text{act}} \cup \mathcal{O}_{\text{non-act}}$
+            \end{algorithmic}
+        \end{algorithm}
 
-    \begin{figure}[t]
-        \centering
-        \includegraphics[width=\linewidth]{fig/sort+depthsort.pdf}
-        \caption[SORT+DepthSORTの概略図]{SORT+DepthSORTの概略図}
-        \label{fig:sort+depthsort}
-    \end{figure}
+        SORTでは時間方向に画像から検出されたバウンディングボックスを比較し，同じ個体由来のバウンディングボックス同士を対応付けていた．よってスライス同士の対応付けを行うためには，ある時刻$t$における$n_s$枚のスライスを時系列データとみなしてSORTを実施すれば良い．この操作をDepthSORTと呼ぶことにする．DepthSORTにより，時刻$t$におけるReIDへの入力$B_{t, 1}, B_{t,2}, \dots, B_{t, n_s}$に含まれるバウンディングボックスを，由来する個体ごとに分けられた集合に分けることができる．ここでは前述のスライスごとの対応付けの結果と区別するため，この集合を，
+        \begin{equation}
+            \label{eq:dsort_identified_bboxes}
+            \mathcal{O}_{\text{d-sort}} = \left\{O_{\text{d-sort}}^{(i)} \mid i \in \mathcal{I}_{t}^{\text{d-sort}}\right\}
+        \end{equation}
+        と表す．ここで$\mathcal{I}_t^{\text{d-sort}}$は仕分けられた各個体のIDを示すが，時刻$t-1$までに追跡してきたIDとは関係ないIDであることに注意されたい．
+
+        DepthSORTのアルゴリズムをアルゴリズム\ref{alg:depth_sort}に示す．DepthSORTのアルゴリズムはほとんどがSORT（\ref{alg:sort}参照）と同様であるが，異なる点が三点ある．まず一つ目に，入力バウンディングボックス系列が時間に関する系列ではなく，スライスに関する系列（一行目および6行目）であることである．そして二つ目に，出力には閾値$\sigma_{\text{act}}$によって打ち切られた軌跡が含まれることである．SORTではリアルタイム追跡を行っていたため，最新時刻$t$時点で打ち切られているトラックには基本的には興味がない．しかしながらDepthSORTの場合は，打ち切られた軌跡は過去のものではなく単に検出された物体の位置が低いことを示しているだけである．よってDepthSORTでは打ち切られた軌跡$\mathcal{O}_{\text{act}}$も出力する（21および25行目）．また三点目に，軌跡の打ち切りタイミングを調整する$\sigma_{\text{act}}$のスケールが異なることである．SORTにおける$\sigma_{\text{act}} = 1$は，あるスライスが再び撮影されるまでの時間$dt$の間であれば更新がなくても追跡を続けることを意味する．一方でDepthSORTにおける$\sigma_{\text{act}} = 1$は，二次元スライス画像を一枚得るための時間$t_c$の間しか更新抜けを許さないことを意味する．これは非常に厳格な閾値となってしまうため，通常はSORTにおける閾値の値よりも大きく設定したほうがよい．具体的な値については，後述の実験パートで議論する．
+        
+        \subsubsection{時間方向の対応付けと深さ方向の対応付けの統合}
+
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=\linewidth]{fig/sort+depthsort.pdf}
+            \caption[SORT+DepthSORTの概略図]{SORT+DepthSORTの概略図：}
+            \label{fig:sort_depthsort}
+        \end{figure}
+
+        \begin{algorithm}[t]
+            \caption{SORT+DepthSORT}
+            \label{alg:sort_depthsort}
+            \small
+            \begin{algorithmic}[1]
+                \Require $\mathcal{B} = \left\{B_{t,s} = \left\{\bm{b}_{t,s}^{(1)}, \bm{b}_{t,s}^{(2)}, \dots\right\} \mid t \in \left\{1, 2, \dots, T\right\}, s \in \left\{1, 2, \dots, n_s\right\}\right\}$
+                \Ensure $\mathcal{O}_T = \left\{O^{(i)} \mid i \in \mathcal{I}_t\right\}$
+                \State $\textbf{Initialize: } \sigma_{\text{act}},\ \mathcal{O}_{\text{sort}}, \mathcal{O}_{\text{d-sort}}$
+                \State $\mathcal{O}_1 = depth\_sort(\left\{B_{t, s} \mid s \in \left\{1, 2, \dots, n_s\right\}\right\})$
+                \State $\mathcal{I}_1 = \left\{i \mid O^{(i)} \in \mathcal{O}_1\right\}$
+                \For {$t = 2 \text{ to } T$}
+                    \State $\mathcal{O}_t = \emptyset,\ \mathcal{O}_{\text{sort}} \gets \emptyset,\ \mathcal{O}_{\text{d-sort}} \gets \emptyset$
+                    \For {$s = 1 \text{ to } n_s$}
+                        \State $\hat{B}_{t,s} = \emptyset$
+                        \For {$O^{(i)} \text{ in } \mathcal{O}_{t-1}$}
+                            \State $\hat{\bm{b}}_{t,s}^{(i)} = kalman\_predict\left(\left\{\bm{b}_{t',s'}^{(i)} \mid \bm{b}_{t',s'}^{(i)} \in O^{(i)} \land s' = s\right\}\right)$
+                            \State $\text{add } \hat{\bm{b}}_{t,s}^{(i)} \text{ to }\hat{B}_{t,s}$
+                        \EndFor
+                        \State $M_{t,s} = hungarian\_matching(\hat{B}_{t,s}, B_{t,s})$
+                        \For {$(i,j) \text{ in } M_{t,s}$}
+                            \If {$O_{\text{sort}}^{(i)} \text{ is undefined}$}
+                                \State $\text{add } O_{\text{sort}}^{(i)} = \left\{\bm{b}_{t,s}^{(j)}\right\} \text{ to } \mathcal{O}_{\text{sort}}$
+                            \Else
+                                \State $\text{add } \bm{b}_{t,s}^{(j)} \text{ to } O_{\text{sort}}^{(i)}$
+                            \EndIf
+                        \EndFor
+                    \EndFor 
+                    \State $\mathcal{O}_{\text{d-sort}} \gets depth\_sort\left(\left\{B_{t',s} \mid B_{t',s} \in \mathcal{B} \land t' = t\right\}\right)$
+                    \State $M_t = hungarian\_matching(\mathcal{O}_{\text{sort}}, \mathcal{O}_{\text{d-sort}})$
+                    \For {$(i,j) \text{ in } M_t$}
+                        \State $O^{(i)} \gets O^{(i)} \cup O_{\text{d-sort}}^{(j)}$
+                        \State $\text{add } O^{(i)} \text{ to } \mathcal{O}_t $
+                        \State $\text{add } i \text{ to } \mathcal{I}_t$
+                    \EndFor
+                    \For {$i \text{ in } \mathcal{I}_{t-1}$}
+                        \State $\sigma_i = calculate\_staleness(i, \mathcal{I}_1, \mathcal{I}_2, \dots, \mathcal{I}_t)$
+                        \If {$\sigma_i \leq \sigma_{\text{act}}$}
+                            \State $\text{add } O^{(i)} \text{ to } \mathcal{O}_t$
+                        \EndIf
+                    \EndFor
+                \EndFor
+                \State \Return $\mathcal{O}_T$
+            \end{algorithmic}
+        \end{algorithm}
+
+        DepthSORTの出力はスライス同士の対応付けを可能にしていたが，この振り分けられた各IDと，時刻$t-1$までに追跡されてきた物体のIDは関連していない．よって最後に，この深さ方向から得られたReID情報と時間方向から得られたReID情報の統合を行い，SliceKalmanFilterへの出力を得るアルゴリズムを説明する．
+
+        最終的な統合では，DepthSORTによって得られたReID情報に対して，時刻$t-1$までに追跡してきたID集合$\mathcal{I}_{t-1}$を割り当て，物体$i \in \mathcal{I}_{t-1}$のSliceKalmanFilterにそのIDを割当てられた，DepthSORTによるバウンディングボックス群を入力する．これはすなわち，スライスごとの対応付けで用いたID集合$\mathcal{I}_{t-1}$と，DepthSORTの結果におけるID集合$\mathcal{I}_t^{\text{d-sort}}$間の対応付けと考えることができる．よってこの問題を，割当問題としてアルゴリズム\ref{alg:hungarian_matching}を利用することで最適化する．また割当問題におけるスコア行列の各要素$s_{ij}$は，$O_{\text{sort}}^{(i)}$と$O_{\text{d-sort}}^{(j)}$の二つの集合の積集合の要素数，すなわち$\left| O_{\text{sort}}^{(i)}\cap O_{\text{d-sort}}^{(j)}\right|$とする．
+
+        SORT+DepthSORTによる，時刻$t$までの各画像に対応するバウンディングボックス集合の系列データ$\mathcal{B}$が得られたときに，IDごとに，各IDに割り当てられたバウンディングボックス集合を返すReIDのアルゴリズムをアルゴリズム\ref{alg:sort_depthsort}に示す．また時刻$t$における処理の様子を図\ref{fig:sort_depthsort}に示す．
+
+        時刻$t$のスライス二次元画像から検出されたバウンディングボックス群$B_{t, 1}, B_{t, 2}, \dots, B_{t, n_s}$が得られたら，まずはスライスごとの予測および対応付けを行う（アルゴリズム6-20行目，図左上と中央上）．この予測は，各スライスで検出された時刻$t-1$までのバウンディングボックスをカルマンフィルタに入力することによって行われる（アルゴリズム9行目）．これによって，一時的なIDが割り振られたバウンディングボックス集合$\mathcal{O}_{\text{sort}}$が得られる（アルゴリズム15行目および17行目）．
+
+        そしてこのスライスごとの対応付けとは別に，バウンディングボックス群$B_{t, 1}, B_{t, 2}, \dots, B_{t, n_s}$を入力としたDepthSORTを行う（アルゴリズム21行目，図下半分）．この操作により，入力されたバウンディングボックス群を個体ごとに仕分けた$\mathcal{O}_{\text{d-sort}}$が得られる．
+
+        そして最後に，時刻$t-1$までのIDが割り振られた$\mathcal{O}_{\text{sort}}$と個体ごとにIDが振られた$\mathcal{O}_{\text{d-sort}}$の間で対応付けを行い，結果に応じて更新・生成・削除を行う（アルゴリズム22-33行目，図右上）．ただしアルゴリズムでは，例にならい生成の処理を省略した．これの操作により，別の個体由来のバウンディングボックスが対応付けられてしまう事態を抑えながら，他のスライスへの対応付けを可能にしている．
+
+        \subsubsection{その他のReID手法の選択肢}
+
+        前述のSORT+DepthSORTでは，既存手法のSORTでも用いられていたようなバウンディングボックスに対応する状態変数\ref{eq:sort_state_vector}を対応付けに利用していた．しかしながら提案手法では状態推定用のカルマンフィルタ，SliceKalmanFilterがあるため，これを用いた観測予測を利用することも可能である．また特に$z$方向への速度が大きい場合には，三次元的な情報を考慮できるSliceKalmanFilterのほうがより精度の高い観測予測を行える可能性がある．よって別のReID手法として，スライスごとの対応付けにおいてSliceKalmanFilterの観測予測を用いる手法も提案する．
+        
+        さらにまた別手法として，そもそもDepthSORTによって得られたReID情報を更新に用いないことも考えられる．この場合は時刻$t$の対応付けにおいて時刻$t-1$までに三次元的な観測変数を得なければならない．よってこの手法では，スライスごとの対応付けにはSliceKalmanFilterを利用し，新しいID生成にはDepthSORTを用いる．ただしこの生成に用いるバウンディングボックス群は，更新時に利用されたバウンディングボックスを一つも含まないバウンディングボックス群であるとする．
+
+        以上のReID手法を表\ref{tab:reidentification_methods}にまとめる．表における``観測予測手法"とは，スライスごとの対応付けにおける予測手法のことを表す．``二次元"の場合はSORTのようなバウンディングボックスの状態変数を用い，``三次元''の場合はSliceKalmanFilterを使用する．また``更新時に用いるReID''とは，DepthSORTから得られたReIDとの対応付けを行うかどうかを示している．``スライスごと''である場合は，スライスごとに対応付けされたバウンディングボックスをそのまま観測変数としてSliceKalmanFilterの更新に用いる．一方``DepthSORT''の場合は，ID間の対応付けを行い，DepthSORTから得られた個体ごとのバウンディングボックスをSliceKalmanFilterの観測変数として与える．
+
+        \begin{table}[t]
+            \centering
+            \caption[ReID手法の選択肢]{ReID手法の選択肢}
+            \label{tab:reidentification_methods}
+            \begin{tabular}{l|cc}
+                \hline mode &  観測予測手法 & 更新時に用いるReID
+                \\\hline \hline only SORT & 二次元 & スライスごと
+                \\only SKF & 三次元 & スライスごと
+                \\SORT + DepthSORT & 二次元 & DepthSORT
+                \\SKF + DepthSORT & 三次元 & DepthSORT
+            \end{tabular}
+        \end{table}
+
+
