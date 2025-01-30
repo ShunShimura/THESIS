@@ -315,3 +315,34 @@
     まず物体検出のFNが状態推定精度に与える影響を図\ref{fig:FN_effect}に示す．まずReIDにSliceKalmanFilterのみを用いた場合は，精度および予測される物体数も安定し，影響を受けないことが分かる．一方でDepthSORTを用いる他の二つの手法は検出抜けの割合$r_d$に応じて精度が悪化している．これはDepthSORTを行う際に，追跡をやめる打ち切り閾値を$1$に設定したことが起因し，追跡が途切れたことが原因と考える．実際に予測されている物体数を数えると，$r_d$が増える程その予測数も多くなり，DepthSORTの軌跡の分裂がひとつの大きな要因として考えられる．
 
     よってその打ち切り閾値を変化させた場合の結果が図\ref{fig:depth_thres_covering}である．各色のプロットがその打ち切り閾値に対応しており，閾値を大きくすることである程度の改善が見られていることが分かる．ただし図\ref{fig:AssA_with_thres}に着目すると，この改善もある閾値で頭打ちになる．これはおそらく，閾値を大きくしたことによって今度は他の個体由来のバウンディングボックスが対応付けられるようになってしまったことが要因として考えられる．
+
+    \subsection{物体検出のFPが与える効果}
+    \label{subsec:false_positive_effect}
+
+    次に誤検出（FP）が複数物体追跡に及ぼす影響を評価する．本節では，検出されたバウンディングボックスのうちFPが含まれる確率を制御する．よってこの割合を$r_{\text{FP}} \in [0, 1]$とし，各フレームごとの検出数$\times r_{\text{FP}}$個の偽バウンディングボックスを生成する．このときバウンディングボックスの位置$(x,y)$は$[0, \ell]$から一様サンプリングし，サイズ$(w,h)$は$[r_{\text{min}}, r_{\text{max}}]$から一様サンプリングしたのち二倍した値を共通して与えている．またこのバウンディングボックスが領域$[0, 1]^2$を超える場合は，$[0, 1]$にクランプする．
+
+        \subsubsection{結果}
+
+        \begin{figure}[t]
+            \centering
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/FPeffect_on_meanIoU.pdf}
+                \caption[物体検出のFPが状態推定に与える影響]{物体検出のFPが状態推定に与える影響}
+                \label{fig:FPeffect_on_meanIoU}
+            \end{subfigure}
+            \begin{subfigure}[t]{0.66\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/FPeffect_on_ReID.pdf}
+                \caption[物体検出のFPがReIDに与える影響]{物体検出のFPがReIDに与える影響}
+                \label{fig:FPeffect_on_ReID}
+            \end{subfigure}
+            \caption[物体検出のFPが与える影響]{物体検出のFPが与える影響}
+            \label{fig:FPeffect}
+        \end{figure}
+
+        図\ref{fig:yolo_f1score}に応じて，$r_{\text{FP}}$を$0.1$から$0.5$まで変化させたときのReIDおよび状態推定に与える影響を図\ref{fig:FPeffect}に示す．まず状態推定ついて（図\ref{fig:FPeffect_on_meanIoU}）は，FPの割合を変更させたときに推定精度の挙動は変わるものの，全体的な変化は見られなかった．これはすなわち，物体検出のFPとFNのトレードオフを考える際に，FNを優先して信頼度スコアの閾値を低くすれば良いことを示唆している．
+
+        一方ReIDの精度（図\ref{fig:FPeffect_on_ReID}）に着目すると，AssAはあまり変化しないもののIDSWでは変化が見られた．これはつまり，ある個体由来のバウンディングボックスが複数の物体として分裂して認識されているが，ほとんどのバウンディングボックスが一つのIDに割り当てられ，分裂したバウンディングボックスが少量であったと推測できる．すなわちReIDにおいてもFPの大きな影響がないことが分かる．
+
+        これらの結果は，ほとんどの対応付けをIoUベースで実施していることが理由として考えられる．IoUをベースにする場合，たとえFPの割合が大きいとしても，正しい対応付けに影響するのは，TPのバウンディングボックスに対してIoUが$0$より大きいFPのバウンディングボックスのみである．よってFPの割合が大きくてもあまり精度に影響が出なかったと考えれる．
