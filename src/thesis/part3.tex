@@ -16,74 +16,74 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     
     全体のアルゴリズムを説明する前に，まずはYOLOを用いて達成される物体検出というタスクとSORTを用いて達成されるReIDというタスクについて，それぞれの入力や出力を述べる．
 
-    \subsubsection{物体検出}
-    物体検出とは，コンピュータビジョンタスクおよび技術の一つであり，一枚の画像を入力した際に，物体の位置とその物体が何であるかを行うタスクのことである．物体の位置はバウンディングボックスと呼ばれる矩形領域で表され，一方物体が何であるかは，事前に設定したクラス候補に対するクラス分類で行われる．また，画像内に複数の物体が存在する場合に，それらを同時かつ個別に位置特定およびクラス分類を行うことができる．
+        \subsubsection{物体検出}
+        物体検出とは，コンピュータビジョンタスクおよび技術の一つであり，一枚の画像を入力した際に，物体の位置とその物体が何であるかを行うタスクのことである．物体の位置はバウンディングボックスと呼ばれる矩形領域で表され，一方物体が何であるかは，事前に設定したクラス候補に対するクラス分類で行われる．また，画像内に複数の物体が存在する場合に，それらを同時かつ個別に位置特定およびクラス分類を行うことができる．
 
-    物体の位置を示すバウンディングボックス$\bm{b}$は，画像上のピクセル位置$(x, y)$と画像における物体の幅と高さ$(w,h)$を用いて，
-    \begin{equation}
-        \label{eq:bounding_box}
-        \bm{b} = \left[x, y, w, h\right]^{\top}
-    \end{equation}
-    で表される．また一つの検出されたバウンディングボックスについて，その所属するクラスは，事前に候補とした各クラスに対する$[0, 1]$の確率で表現される．すなわち出力されるクラス確率$\bm{c}$は，用意したクラス候補集合$\mathcal{C}$を$\left\{c_i \mid i \in \mathcal{C}\right\}$として，
-    \begin{equation}
-        \label{eq:class_probability}
-        \bm{c} = \left\{p(c_i) \mid i \in \mathcal{C}\right\}
-    \end{equation}
-    で表される．
+        物体の位置を示すバウンディングボックス$\bm{b}$は，画像上のピクセル位置$(x, y)$と画像における物体の幅と高さ$(w,h)$を用いて，
+        \begin{equation}
+            \label{eq:bounding_box}
+            \bm{b} = \left[x, y, w, h\right]^{\top}
+        \end{equation}
+        で表される．また一つの検出されたバウンディングボックスについて，その所属するクラスは，事前に候補とした各クラスに対する$[0, 1]$の確率で表現される．すなわち出力されるクラス確率$\bm{c}$は，用意したクラス候補集合$\mathcal{C}$を$\left\{c_i \mid i \in \mathcal{C}\right\}$として，
+        \begin{equation}
+            \label{eq:class_probability}
+            \bm{c} = \left\{p(c_i) \mid i \in \mathcal{C}\right\}
+        \end{equation}
+        で表される．
 
-    これらを用いて，物体検出器$f$がある画像$X \in \mathbb{R}^{W \times H \times 3}$を入力した時に得られる出力$Y$は，
-    \begin{equation}
-        \label{eq:object_detection}
-        \begin{aligned}
-            f(X) &= Y
-            \\ &= \left\{\bm{b}^{(j)}, ~\bm{c}^{(j)} \mid j \in N_X\right\}
-        \end{aligned}
-    \end{equation}
-    と表される．ここで$N_X$は，ある画像$X$を入力した際に検出された物体数を表している．また$j$はその各物体を表すインデックスである．
+        これらを用いて，物体検出器$f$がある画像$X \in \mathbb{R}^{W \times H \times 3}$を入力した時に得られる出力$Y$は，
+        \begin{equation}
+            \label{eq:object_detection}
+            \begin{aligned}
+                f(X) &= Y
+                \\ &= \left\{\bm{b}^{(j)}, ~\bm{c}^{(j)} \mid j \in N_X\right\}
+            \end{aligned}
+        \end{equation}
+        と表される．ここで$N_X$は，ある画像$X$を入力した際に検出された物体数を表している．また$j$はその各物体を表すインデックスである．
 
-    \subsubsection{ReID}
-    ReIDとは，検出された各物体の情報（物体検出であればバウンディングボックス）に対して，個体を識別するためのIDを割り当てるタスクである．これにより，同一の個体由来の検出情報の対応付けが達成され，ある物体がどのような軌跡を描いたのか，どこから来たのか，さらにはどのように形状が変化したのかなどの情報を得ることができる．
+        \subsubsection{ReID}
+        ReIDとは，検出された各物体の情報（物体検出であればバウンディングボックス）に対して，個体を識別するためのIDを割り当てるタスクである．これにより，同一の個体由来の検出情報の対応付けが達成され，ある物体がどのような軌跡を描いたのか，どこから来たのか，さらにはどのように形状が変化したのかなどの情報を得ることができる．
 
-    ここで，時刻$t$に得られた画像を入力し検出器によって得られた物体の情報の集合$D_t$を，
-    \begin{equation}
-        \label{eq:input_to_reid}
-        D_t = \left\{\bm{d}^{(i)} \mid i \in N_t\right\}
-    \end{equation}
-    と表す．ここで$N_t$は時刻$t$の画像を検出器に入力した際に，検出された物体数を表す．また$\bm{d}^{(i)}$は$i$番目の検出情報を表す．例えば検出器に物体検出器を用いれば，$\bm{d}^{(i)}$は式\ref{eq:bounding_box}で表されるバウンディングボックスである．
+        ここで，時刻$t$に得られた画像を入力し検出器によって得られた物体の情報の集合$D_t$を，
+        \begin{equation}
+            \label{eq:input_to_reid}
+            D_t = \left\{\bm{d}^{(i)} \mid i \in N_t\right\}
+        \end{equation}
+        と表す．ここで$N_t$は時刻$t$の画像を検出器に入力した際に，検出された物体数を表す．また$\bm{d}^{(i)}$は$i$番目の検出情報を表す．例えば検出器に物体検出器を用いれば，$\bm{d}^{(i)}$は式\ref{eq:bounding_box}で表されるバウンディングボックスである．
 
-    ここで時刻$t-1$までに得られた追跡情報のIDの集合を$\mathcal{I}_{t-1} = \left\{1, 2, \dots\right\}$とし，ReIDによって，対応付けされた関係を表すペア$(i, j)$の集合$M = \left\{(i, j)\right\}$が得られたとする（$i$は$\mathcal{I}_{t-1}$，$j$は$D_t$のインデックスに対応している）．このとき$D_t$および$\mathcal{I}_{t-1}$を入力とするReIDを行う関数を$g(D_t)$とすると，その出力$O_t$は，
-    \begin{eqnarray}
-        \label{eq:output_of_reid}
-        \begin{aligned}
-            g(D_t, \mathcal{I}_{t-1}) &= O_t
-            \\ &= \left\{\bm{d}_{\text{reid}}^{(i)} \mid i \in \mathcal{I}_t\right\}
-            \\, &\textbf{where } \bm{d}_{\text{reid}}^{(i)} = \bm{d}^{(j)} ~ \forall (i, j) \in M, \textbf{ or } i \in \mathcal{I}_t \setminus \mathcal{I}_{t-1}
-        \end{aligned}
-    \end{eqnarray}
-    と表される．ここで$\mathcal{I}_t \setminus \mathcal{I}_{t-1}$は，時刻$t$で新たに検出され始めたと認識された物体のID集合を表し，$\bm{d}_{\text{reid}}^{(i)}$は時刻$t$のReIDへの入力$D_t$のうち，IDが$i$の物体に対応付けられたものか，新たに検出され始めたと認識されたものである．
+        ここで時刻$t-1$までに得られた追跡情報のIDの集合を$\mathcal{I}_{t-1} = \left\{1, 2, \dots\right\}$とし，ReIDによって，対応付けされた関係を表すペア$(i, j)$の集合$M = \left\{(i, j)\right\}$が得られたとする（$i$は$\mathcal{I}_{t-1}$，$j$は$D_t$のインデックスに対応している）．このとき$D_t$および$\mathcal{I}_{t-1}$を入力とするReIDを行う関数を$g(D_t)$とすると，その出力$O_t$は，
+        \begin{eqnarray}
+            \label{eq:output_of_reid}
+            \begin{aligned}
+                g(D_t, \mathcal{I}_{t-1}) &= O_t
+                \\ &= \left\{\bm{d}_{\text{reid}}^{(i)} \mid i \in \mathcal{I}_t\right\}
+                \\, &\textbf{where } \bm{d}_{\text{reid}}^{(i)} = \bm{d}^{(j)} ~ \forall (i, j) \in M, \textbf{ or } i \in \mathcal{I}_t \setminus \mathcal{I}_{t-1}
+            \end{aligned}
+        \end{eqnarray}
+        と表される．ここで$\mathcal{I}_t \setminus \mathcal{I}_{t-1}$は，時刻$t$で新たに検出され始めたと認識された物体のID集合を表し，$\bm{d}_{\text{reid}}^{(i)}$は時刻$t$のReIDへの入力$D_t$のうち，IDが$i$の物体に対応付けられたものか，新たに検出され始めたと認識されたものである．
 
-    \subsubsection{物体検出とReIDによるTracking-by-Detection}
-    以上の定式化より，物体検出とReIDによるTracking-by-Detectionは，毎時刻$t$における$f(X_t)$と$g(D_t, \mathcal{I}_{t-1})$の繰り返し（アルゴリズム\ref{alg:object_detection_and_reidentification}の2, 3, 7, 8行目）によって実施される．また最初の時刻の場合は，物体検出の結果は全て別個体由来のはずであるため，そのままインデックスをIDをして$O_1$を生成する（アルゴリズム\ref{alg:object_detection_and_reidentification}の5行目）．アルゴリズム\ref{alg:object_detection_and_reidentification}での出力は，各時刻でIDを割り振られた検出情報の集合$O_1, O_2, \dots, O_T$であるが，これらの情報をIDごとに分ければ，各物体がどのような軌跡を通ってきたかを容易に確認することが可能である．
+        \subsubsection{物体検出とReIDによるTracking-by-Detection}
+        以上の定式化より，物体検出とReIDによるTracking-by-Detectionは，毎時刻$t$における$f(X_t)$と$g(D_t, \mathcal{I}_{t-1})$の繰り返し（アルゴリズム\ref{alg:object_detection_and_reidentification}の2, 3, 7, 8行目）によって実施される．また最初の時刻の場合は，物体検出の結果は全て別個体由来のはずであるため，そのままインデックスをIDをして$O_1$を生成する（アルゴリズム\ref{alg:object_detection_and_reidentification}の5行目）．アルゴリズム\ref{alg:object_detection_and_reidentification}での出力は，各時刻でIDを割り振られた検出情報の集合$O_1, O_2, \dots, O_T$であるが，これらの情報をIDごとに分ければ，各物体がどのような軌跡を通ってきたかを容易に確認することが可能である．
 
-    \begin{algorithm}[t]
-        \caption{Object Detection and Re-Identification}
-        \label{alg:object_detection_and_reidentification}
-        \begin{algorithmic}[1]
-            \Require $X_1, X_2, \dots, X_T, ~f, ~g$
-            \Ensure $O_1, O_2, \dots, O_T$
-            \For {$t = 1 \text{ to } T$}
-                \State $D_t = f(X_t)$
-                \State $ N_t = \left|D_t\right|$
-                \If {$t = 0$}
-                    \State $\mathcal{I}_t = \left\{1, 2, \dots, N_t\right\}, ~ O_t = \left\{\bm{d}^{(i)} \mid i \in \mathcal{I}_t\right\}$
-                \Else
-                    \State $O_t = g(D_t, \mathcal{I}_{t-1})$
-                    \State $\mathcal{I}_t = \left\{i \mid \bm{d}_{\text{reid}}^{(i)} \in O_t\right\}$
-                \EndIf
-            \EndFor
-            \State \Return $O_1, O_2, \dots, O_T$
-        \end{algorithmic}
-    \end{algorithm}
+        \begin{algorithm}[t]
+            \caption{Object Detection and Re-Identification}
+            \label{alg:object_detection_and_reidentification}
+            \begin{algorithmic}[1]
+                \Require $X_1, X_2, \dots, X_T, ~f, ~g$
+                \Ensure $O_1, O_2, \dots, O_T$
+                \For {$t = 1 \text{ to } T$}
+                    \State $D_t = f(X_t)$
+                    \State $ N_t = \left|D_t\right|$
+                    \If {$t = 0$}
+                        \State $\mathcal{I}_t = \left\{1, 2, \dots, N_t\right\}, ~ O_t = \left\{\bm{d}^{(i)} \mid i \in \mathcal{I}_t\right\}$
+                    \Else
+                        \State $O_t = g(D_t, \mathcal{I}_{t-1})$
+                        \State $\mathcal{I}_t = \left\{i \mid \bm{d}_{\text{reid}}^{(i)} \in O_t\right\}$
+                    \EndIf
+                \EndFor
+                \State \Return $O_1, O_2, \dots, O_T$
+            \end{algorithmic}
+        \end{algorithm}
 
     \subsection{リアルタイム物体検出手法：YOLO}
     \label{subsec:object_detection}
@@ -100,25 +100,25 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \label{fig:yolo_tradeoff}
     \end{figure}    
 
-    \subsubsection{YOLOの構成要素}
-    \label{subsubsec:yolo_components}
+        \subsubsection{YOLOの構成要素}
+        \label{subsubsec:yolo_components}
 
-    YOLOは式\ref{eq:bounding_box}で表されるバウンディングボックスと式\ref{eq:class_probability}に加え，バウンディングボックスごとに信頼度スコア（Confidence score）と呼ばれる値を出力する．この値は，検出されたバウンディングボックスがどれだけ物体らしいかを表す．またYOLOの出力におけるクラス確率は式\ref{eq:class_probability}の各値$p(c_i)$にこの信頼度スコアを掛けた値になる．一般的に物体検出では，そこに物体があるはずなのに検出ができなかった偽陰性（False Negative, 以後FNと呼称する）と，物体がないはずの場所を検出してしまう偽陽性（False Positive, 以後FPと呼称する）の二種類のエラーが発生する．通常YOLOでは，信頼度スコアの閾値を設けることでこれらのバランスを抑える．例えば，閾値を高くすれば基準が厳しくなるのでFPが減り，逆に小さくすれば基準が甘くなるのでFNを減らすことができる．また信頼度スコアは後述の非最大抑制にも利用される．
+        YOLOは式\ref{eq:bounding_box}で表されるバウンディングボックスと式\ref{eq:class_probability}に加え，バウンディングボックスごとに信頼度スコア（Confidence score）と呼ばれる値を出力する．この値は，検出されたバウンディングボックスがどれだけ物体らしいかを表す．またYOLOの出力におけるクラス確率は式\ref{eq:class_probability}の各値$p(c_i)$にこの信頼度スコアを掛けた値になる．一般的に物体検出では，そこに物体があるはずなのに検出ができなかった偽陰性（False Negative, 以後FNと呼称する）と，物体がないはずの場所を検出してしまう偽陽性（False Positive, 以後FPと呼称する）の二種類のエラーが発生する．通常YOLOでは，信頼度スコアの閾値を設けることでこれらのバランスを抑える．例えば，閾値を高くすれば基準が厳しくなるのでFPが減り，逆に小さくすれば基準が甘くなるのでFNを減らすことができる．また信頼度スコアは後述の非最大抑制にも利用される．
 
-    非最大抑制（Non-Maximum Suppression, 以後NMSと呼称する）は，ある画像内の物体に対して，検出結果が二つ以上得られてしまった際にそれらを抑制するための事後的アルゴリズムである．NMSでは，前述の信頼度スコアが高い順に，一つのバウンディングボックスに対して重なり具合が一定値以上のバウンディングボックスがあるか確認し，ある場合には信頼度スコアが低い方を削除していく．ここでの重なり具合の評価指標としてはIntersection of Union（IoU）が用いられる．ただしNMSは時間的なコストが高く，それに対して改善されたv10ではアルゴリズムに入っていないことに注意されたい．
+        非最大抑制（Non-Maximum Suppression, 以後NMSと呼称する）は，ある画像内の物体に対して，検出結果が二つ以上得られてしまった際にそれらを抑制するための事後的アルゴリズムである．NMSでは，前述の信頼度スコアが高い順に，一つのバウンディングボックスに対して重なり具合が一定値以上のバウンディングボックスがあるか確認し，ある場合には信頼度スコアが低い方を削除していく．ここでの重なり具合の評価指標としてはIntersection of Union（IoU）が用いられる．ただしNMSは時間的なコストが高く，それに対して改善されたv10ではアルゴリズムに入っていないことに注意されたい．
 
-    \subsubsection{YOLOの学習方法}
+        \subsubsection{YOLOの学習方法}
 
-    先程も述べたように深層学習では一般的に，モデルの学習パラメータ数を大きくするほど精度が改善される．しかしながらそういったモデルの学習には，より大規模なデータセットを準備しなければならず，学習にも時間がかかる．そういった場合，何かしらのタスクを解くためのモデルを作るたびにゼロからモデルを学習させるのは，データ準備の面でも学習の面でも非常に非効率である．また場合によっては，学習パラメータの初期値によって学習が思ったように進まないこともある．
+        先程も述べたように深層学習では一般的に，モデルの学習パラメータ数を大きくするほど精度が改善される．しかしながらそういったモデルの学習には，より大規模なデータセットを準備しなければならず，学習にも時間がかかる．そういった場合，何かしらのタスクを解くためのモデルを作るたびにゼロからモデルを学習させるのは，データ準備の面でも学習の面でも非常に非効率である．また場合によっては，学習パラメータの初期値によって学習が思ったように進まないこともある．
 
-    そこで深層学習でよく用いられる学習方法が，事前学習（Pre-Training）と微調整（Fine-Tuning）である\cite{radford2018improving}．まず事前学習では，大規模なデータセットで学習を行い汎用的な能力を獲得させ，微調整で本来の目的のタスクおよびデータセットを用いて最終的な学習を行い，そのタスクに特化したモデルを構築する．またこの大規模なデータセットによって事前学習モデルは，オープンソースで公開されていることが多い．例えばコンピュータビジョン分野では，データセットの作成が安価である画像分類で事前学習を行い，画像入力に適したモデルを構築する．これにより，大量のデータセットが高価なタスクに適したモデルの構築が可能である．また物体検出やクラス分類では，事前学習時と微調整時でクラスの候補を変えることも可能である．この場合は，最終層だけ新しいものに取り替えればよい（図\ref{fig:PTandFT}参照）．
+        そこで深層学習でよく用いられる学習方法が，事前学習（Pre-Training）と微調整（Fine-Tuning）である\cite{radford2018improving}．まず事前学習では，大規模なデータセットで学習を行い汎用的な能力を獲得させ，微調整で本来の目的のタスクおよびデータセットを用いて最終的な学習を行い，そのタスクに特化したモデルを構築する．またこの大規模なデータセットによって事前学習モデルは，オープンソースで公開されていることが多い．例えばコンピュータビジョン分野では，データセットの作成が安価である画像分類で事前学習を行い，画像入力に適したモデルを構築する．これにより，大量のデータセットが高価なタスクに適したモデルの構築が可能である．また物体検出やクラス分類では，事前学習時と微調整時でクラスの候補を変えることも可能である．この場合は，最終層だけ新しいものに取り替えればよい（図\ref{fig:PTandFT}参照）．
 
-    \begin{figure}[t]
-        \centering    
-        \includegraphics[width=\linewidth]{fig/PTandFT.pdf}
-        \caption[事前学習と微調整]{事前学習と微調整：この図の例では，微調整時に最終層だけを取り替え，それ以外の層は学習パラメータを固定する例を示している．他にも，前半の層だけ学習の度合いを表す学習率を小さくしたり，全体に対して微調整時のみ学習率を下げるなど，様々な選択肢がある．}
-        \label{fig:PTandFT}
-    \end{figure}
+        \begin{figure}[t]
+            \centering    
+            \includegraphics[width=\linewidth]{fig/PTandFT.pdf}
+            \caption[事前学習と微調整]{事前学習と微調整：この図の例では，微調整時に最終層だけを取り替え，それ以外の層は学習パラメータを固定する例を示している．他にも，前半の層だけ学習の度合いを表す学習率を小さくしたり，全体に対して微調整時のみ学習率を下げるなど，様々な選択肢がある．}
+            \label{fig:PTandFT}
+        \end{figure}
 
     \subsection{SORTの概要}
     \label{subsec:abstract_of_sort}
@@ -198,143 +198,143 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
     そこでSORTが利用するのがカルマンフィルタによる予測である．ReIDでは時刻$t$の処理において，それまでのReID結果$O_1, O_2, \dots, O_{t-1}$を得ている（\ref{alg:object_detection_and_reidentification}参照）．また前述のように，これをIDごとに分けることによって，各物体の時刻$t-1$までの軌跡を得ることができる．このデータをカルマンフィルタに入力することにより，時刻$t$において追跡をしている各物体の，時刻$t+1$における検出情報の予測を得る．そして時刻$t$の検出情報の代わりに，この予測情報を用いて対応付けを行う．これにより，速度を持った対象に対してもある程度対応付けが可能になる．
 
-    \subsubsection{カルマンフィルタの問題設定}
-    \label{subsubsec:kalmanfilter_setting}
+        \subsubsection{カルマンフィルタの問題設定}
+        \label{subsubsec:kalmanfilter_setting}
 
-    カルマンフィルタ\cite{bishop2001introduction}とは，センサーなどから得られた時系列データを入力し，システム内部の状態を推定するための最適化アルゴリズムである．ここではセンサーから得られる観測変数の系列を$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$，システム内部の状態変数の系列を$\bm{s}_1, \bm{s}_2, \dots, \bm{s}_t$と表記する．カルマンフィルタの問題設定は，観測系列$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$が得られたときに状態変数$\bm{s}_t$の推定値$\hat{\bm{s}}_t$を最適化することである．またこの最適性は，
-    \begin{equation}
-        \label{eq:kalman_optimality}
-        \hat{\bm{s}}_t^* = \underset{\hat{\bm{s}}_t}{\text{argmin}} ~ \mathbb{E}\left[\left(\hat{\bm{s}}_t - \bm{s}_t\right)^2\right] - \mathbb{E}\left[\hat{\bm{s}}_t - \bm{s}_t\right]^2,
-    \end{equation}
-    すなわち推定誤差の分散最小化で与えられる．
+        カルマンフィルタ\cite{bishop2001introduction}とは，センサーなどから得られた時系列データを入力し，システム内部の状態を推定するための最適化アルゴリズムである．ここではセンサーから得られる観測変数の系列を$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$，システム内部の状態変数の系列を$\bm{s}_1, \bm{s}_2, \dots, \bm{s}_t$と表記する．カルマンフィルタの問題設定は，観測系列$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$が得られたときに状態変数$\bm{s}_t$の推定値$\hat{\bm{s}}_t$を最適化することである．またこの最適性は，
+        \begin{equation}
+            \label{eq:kalman_optimality}
+            \hat{\bm{s}}_t^* = \underset{\hat{\bm{s}}_t}{\text{argmin}} ~ \mathbb{E}\left[\left(\hat{\bm{s}}_t - \bm{s}_t\right)^2\right] - \mathbb{E}\left[\hat{\bm{s}}_t - \bm{s}_t\right]^2,
+        \end{equation}
+        すなわち推定誤差の分散最小化で与えられる．
 
-    この分散最小化を行うために，時刻$t$までの観測系列$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$を得たときの時刻$t$の状態変数$\bm{s}_t$の確率分布を考える．これはベイズの定理より，
-    \begin{equation}
-        \label{eq:posterior_with_bayes}
-        p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_t ) = \frac{p(\bm{o}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1}, \bm{s}_t) p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})}{p(\bm{o}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})}
-    \end{equation}
-    と書き下せる．また右辺の分子後半部$p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})$は条件付き確率の性質から，
-    \begin{equation}
-        \label{eq:posterior_with_conditioning}
-        p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1}) = \int p(\bm{s}_t \mid \bm{s}_{t-1}, \bm{o}_1, \dots, \bm{o}_{t-1}) ~ p(\bm{s}_{t-1} \mid \bm{o}_1, \dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
-    \end{equation}
+        この分散最小化を行うために，時刻$t$までの観測系列$\bm{o}_1, \bm{o}_2, \dots, \bm{o}_t$を得たときの時刻$t$の状態変数$\bm{s}_t$の確率分布を考える．これはベイズの定理より，
+        \begin{equation}
+            \label{eq:posterior_with_bayes}
+            p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_t ) = \frac{p(\bm{o}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1}, \bm{s}_t) p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})}{p(\bm{o}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})}
+        \end{equation}
+        と書き下せる．また右辺の分子後半部$p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1})$は条件付き確率の性質から，
+        \begin{equation}
+            \label{eq:posterior_with_conditioning}
+            p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_{t-1}) = \int p(\bm{s}_t \mid \bm{s}_{t-1}, \bm{o}_1, \dots, \bm{o}_{t-1}) ~ p(\bm{s}_{t-1} \mid \bm{o}_1, \dots, \bm{o}_{t-1}) d\bm{s}_{t-1}
+        \end{equation}
 
-    式\ref{eq:posterior_with_bayes}と式\ref{eq:posterior_with_conditioning}より，$p(\bm{s}_0 \mid \bm{o}_0) = p(\bm{s}_0)$が与えられればすべての時刻$t = 1, 2, \dots, t$における$p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_t)$が理論上には計算することができる．しかしながら式\ref{eq:posterior_with_bayes}における分母や式\ref{eq:posterior_with_conditioning}における右辺には積分が含まれるため，現実には計算することができない．
+        式\ref{eq:posterior_with_bayes}と式\ref{eq:posterior_with_conditioning}より，$p(\bm{s}_0 \mid \bm{o}_0) = p(\bm{s}_0)$が与えられればすべての時刻$t = 1, 2, \dots, t$における$p(\bm{s}_t \mid \bm{o}_1,\dots, \bm{o}_t)$が理論上には計算することができる．しかしながら式\ref{eq:posterior_with_bayes}における分母や式\ref{eq:posterior_with_conditioning}における右辺には積分が含まれるため，現実には計算することができない．
 
-    そのため一般的なカルマンフィルタでは，システムや観測の線形性とマルコフ性，およびノイズの正規性を仮定する．すなわち，
-    \begin{equation}
-        \label{eq:kalman_GL}
-        \begin{aligned}
-            \bm{s}_{t+1} &= F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
-            \\ \bm{o}_t &= H_t \bm{s}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
-        \end{aligned}        
-    \end{equation}
-    を仮定する．上の式は状態遷移式，下の式は観測方程式と呼ばれる．ここで$F_t$は時刻$t$における状態変数の時間遷移を表す遷移行列，$H_t$は時刻$t$における状態から観測への変換を表す観測行列である．また$\bm{v}_t$はシステムに加えられるノイズ，$\bm{w}_t$は観測時に観測変数に加えられるノイズである．
+        そのため一般的なカルマンフィルタでは，システムや観測の線形性とマルコフ性，およびノイズの正規性を仮定する．すなわち，
+        \begin{equation}
+            \label{eq:kalman_GL}
+            \begin{aligned}
+                \bm{s}_{t+1} &= F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
+                \\ \bm{o}_t &= H_t \bm{s}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
+            \end{aligned}        
+        \end{equation}
+        を仮定する．上の式は状態遷移式，下の式は観測方程式と呼ばれる．ここで$F_t$は時刻$t$における状態変数の時間遷移を表す遷移行列，$H_t$は時刻$t$における状態から観測への変換を表す観測行列である．また$\bm{v}_t$はシステムに加えられるノイズ，$\bm{w}_t$は観測時に観測変数に加えられるノイズである．
 
-    以上の仮定により，時刻$t+1$の状態変数は時刻$t$の状態変数のみによって記述でき，また時刻$t$の観測変数も同様に時刻$t$の状態変数のみによって記述できる．すなわち，
-    \begin{equation}
-        \label{eq:kalman_with_markov}
-        \begin{aligned}
-            p(\bm{s}_{t} \mid \bm{s}_{t-1}, \bm{o}_1, \dots, \bm{o}_t) &= p(\bm{s}_t \mid \bm{s}_t)
-            \\p(\bm{o}_t \mid \bm{o}_1, \dots, \bm{o}_{t-1}, \bm{s}_t) &= p(\bm{o}_t \mid \bm{s}_t)
-        \end{aligned}
-    \end{equation}
-    が成り立つ．さらにこれらは式\ref{eq:kalman_GL}の各変数を用いると，
-    \begin{equation}
-        \label{eq:linear_transition_and_observation}
-        \begin{aligned}
-            p(\bm{s}_t \mid \bm{s}_{t-1}) &= \mathcal{N}(F_{t-1} \bm{s}_{t-1}, Q_{t-1})
-            \\ p(\bm{o}_t \mid \bm{s}_t) &= \mathcal{N}(H_t \bm{s}_{t}, R_t)
-        \end{aligned}
-    \end{equation}
-    のように正規分布の形で記述できる．
+        以上の仮定により，時刻$t+1$の状態変数は時刻$t$の状態変数のみによって記述でき，また時刻$t$の観測変数も同様に時刻$t$の状態変数のみによって記述できる．すなわち，
+        \begin{equation}
+            \label{eq:kalman_with_markov}
+            \begin{aligned}
+                p(\bm{s}_{t} \mid \bm{s}_{t-1}, \bm{o}_1, \dots, \bm{o}_t) &= p(\bm{s}_t \mid \bm{s}_t)
+                \\p(\bm{o}_t \mid \bm{o}_1, \dots, \bm{o}_{t-1}, \bm{s}_t) &= p(\bm{o}_t \mid \bm{s}_t)
+            \end{aligned}
+        \end{equation}
+        が成り立つ．さらにこれらは式\ref{eq:kalman_GL}の各変数を用いると，
+        \begin{equation}
+            \label{eq:linear_transition_and_observation}
+            \begin{aligned}
+                p(\bm{s}_t \mid \bm{s}_{t-1}) &= \mathcal{N}(F_{t-1} \bm{s}_{t-1}, Q_{t-1})
+                \\ p(\bm{o}_t \mid \bm{s}_t) &= \mathcal{N}(H_t \bm{s}_{t}, R_t)
+            \end{aligned}
+        \end{equation}
+        のように正規分布の形で記述できる．
 
-    ここでカルマンフィルタの枠組みでは，時刻$0$における状態変数の事前分布$p(\bm{s}_0)$が正規性を持ち，$p(\bm{s}_0) = \mathcal{N}(\bm{\mu}_{0 \mid 0}, \Sigma_{0 \mid 0})$と仮定する．すると式\ref{eq:kalman_with_markov}はすべて正規分布同士の積で表すことができ，その結果もまた正規分布になることが保証される．よって，
-    \begin{equation}
-        \label{eq:normal_dist_representation}
-        \begin{aligned}
-            p(\bm{s}_t \mid \bm{o}1, \dots, \bm{o}_t)& = \mathcal{N}\left(\bm{\mu}_{t \mid t}, \Sigma_{t \mid t}\right)
-            \\ p(\bm{s}_{t+1} \mid \bm{o}1, \dots, \bm{o}_t) &= \mathcal{N}\left(\bm{\mu}_{t+1 \mid t}, \Sigma_{t+1 \mid t}\right)
-        \end{aligned}
-    \end{equation}
-    と表すと，これら平均と分散は式\ref{eq:kalman_GL}中の変数を用いて，
-    \begin{equation}
-        \label{eq:estimation_equations}
-        \begin{aligned}
-            \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1}
-            \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1}
-            \\\bm{\mu}_{t \mid t} &= \Sigma_{t \mid t} \left( H_t R_t^{-1} \bm{o}_t + \Sigma_{t \mid t-1}^{-1} \bm{\mu}_{t \mid t-1} \right)
-            \\\Sigma_{t \mid t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t \mid t-1}^{-1}\right)^{-1}
-        \end{aligned}
-    \end{equation}
-    と表され，計算可能になる．ただしここで$\bm{\mu}_{0 \mid 0}$および$\Sigma_{0 \mid 0}$はハイパーパラメータである．また一般的にはカルマンゲイン
-    \begin{equation}
-        \label{eq:kalman_gain}
-        K_t = \Sigma_{t \mid t-1} H_t^{\top} \left(H_t \Sigma_{t \mid t-1} H_t^{\top} + R_t\right)^{-1}
-    \end{equation}
-    を用いて，
-    \begin{equation}
-        \label{eq:estimation_equations_with_K}
-        \begin{aligned}
-            \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1}
-            \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1}
-            \\\bm{\mu}_{t \mid t} &= \bm{\mu}_{t \mid t-1} + K_t \left(\bm{o}_t - H_t \bm{\mu}_{t \mid t-1}\right)
-            \\\Sigma_{t \mid t} &= (I - K_t H_t) \Sigma_{t \mid t-1}
-        \end{aligned}                    
-    \end{equation}
-    と表される．
+        ここでカルマンフィルタの枠組みでは，時刻$0$における状態変数の事前分布$p(\bm{s}_0)$が正規性を持ち，$p(\bm{s}_0) = \mathcal{N}(\bm{\mu}_{0 \mid 0}, \Sigma_{0 \mid 0})$と仮定する．すると式\ref{eq:kalman_with_markov}はすべて正規分布同士の積で表すことができ，その結果もまた正規分布になることが保証される．よって，
+        \begin{equation}
+            \label{eq:normal_dist_representation}
+            \begin{aligned}
+                p(\bm{s}_t \mid \bm{o}1, \dots, \bm{o}_t)& = \mathcal{N}\left(\bm{\mu}_{t \mid t}, \Sigma_{t \mid t}\right)
+                \\ p(\bm{s}_{t+1} \mid \bm{o}1, \dots, \bm{o}_t) &= \mathcal{N}\left(\bm{\mu}_{t+1 \mid t}, \Sigma_{t+1 \mid t}\right)
+            \end{aligned}
+        \end{equation}
+        と表すと，これら平均と分散は式\ref{eq:kalman_GL}中の変数を用いて，
+        \begin{equation}
+            \label{eq:estimation_equations}
+            \begin{aligned}
+                \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1}
+                \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1}
+                \\\bm{\mu}_{t \mid t} &= \Sigma_{t \mid t} \left( H_t R_t^{-1} \bm{o}_t + \Sigma_{t \mid t-1}^{-1} \bm{\mu}_{t \mid t-1} \right)
+                \\\Sigma_{t \mid t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t \mid t-1}^{-1}\right)^{-1}
+            \end{aligned}
+        \end{equation}
+        と表され，計算可能になる．ただしここで$\bm{\mu}_{0 \mid 0}$および$\Sigma_{0 \mid 0}$はハイパーパラメータである．また一般的にはカルマンゲイン
+        \begin{equation}
+            \label{eq:kalman_gain}
+            K_t = \Sigma_{t \mid t-1} H_t^{\top} \left(H_t \Sigma_{t \mid t-1} H_t^{\top} + R_t\right)^{-1}
+        \end{equation}
+        を用いて，
+        \begin{equation}
+            \label{eq:estimation_equations_with_K}
+            \begin{aligned}
+                \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1}
+                \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1}
+                \\\bm{\mu}_{t \mid t} &= \bm{\mu}_{t \mid t-1} + K_t \left(\bm{o}_t - H_t \bm{\mu}_{t \mid t-1}\right)
+                \\\Sigma_{t \mid t} &= (I - K_t H_t) \Sigma_{t \mid t-1}
+            \end{aligned}                    
+        \end{equation}
+        と表される．
 
-    また$\bm{s}_t$が正規分布に従う場合，式\ref{eq:kalman_optimality}を満たす推定値は条件付き期待値，すなわち正規分布の第一引数になる．以上より観測系列$\bm{o}_1, \dots, \bm{o}_t$が得られたときの状態変数$\bm{s}_t$のカルマンフィルタの最適推定値は，式\ref{eq:estimation_equations_with_K}の$\bm{\mu}_{t \mid t}$で与えられる．
+        また$\bm{s}_t$が正規分布に従う場合，式\ref{eq:kalman_optimality}を満たす推定値は条件付き期待値，すなわち正規分布の第一引数になる．以上より観測系列$\bm{o}_1, \dots, \bm{o}_t$が得られたときの状態変数$\bm{s}_t$のカルマンフィルタの最適推定値は，式\ref{eq:estimation_equations_with_K}の$\bm{\mu}_{t \mid t}$で与えられる．
 
-    \subsubsection{カルマンフィルタによる状態推定と観測予測}
+        \subsubsection{カルマンフィルタによる状態推定と観測予測}
 
-    \begin{algorithm}[t]
-        \caption[Kalman Estimate]{Kalman Estimate}
-        \label{alg:kalman_estimate}
-        \begin{algorithmic}[1]
-            \Require $O = \left\{\bm{o}_t \mid t \in \mathcal{T} \subset \mathbb{N}_+\right\}, T$
-            \Ensure $\hat{\bm{s}}_T$
-            \State $\textbf{Initialize: } F, Q, H, R, \Sigma_{0 \mid 0}, \bm{\mu}_{0 \mid 0} = initial\_estimate()$
-            \For {$t = 1 \text{ to } T$}
-                \State $\bm{\mu}_{t \mid t-1} = F \bm{\mu}_{t-1 \mid t-1}$
-                \State $\Sigma_{t \mid t-1} = F \Sigma_{t-1 \mid t-1} F^{\top} + Q$
-                \State $\hat{\bm{s}}_t = \bm{\mu}_{t \mid t-1}$
-                \If {$ \bm{o}_t \in O $}
-                    \State $K_t = \Sigma_{t \mid t-1} H^{\top} \left( H \Sigma_{t \mid t-1} H^{\top} + R\right)$
-                    \State $\bm{\mu}_{t \mid t} = \bm{\mu}_{t \mid t-1} + K_t \left( \bm{o}_t - H \bm{\mu}_{t \mid t-1} \right)$
-                    \State $\Sigma_{t \mid t} = \left( I - K_t H \right) \Sigma_{t \mid t-1}$
-                    \State $\hat{\bm{s}}_t = \bm{\mu}_{t \mid t}$
-                \EndIf
-            \EndFor
-            \State \Return $\hat{\bm{s}}_T$
-        \end{algorithmic}
-    \end{algorithm}
+        \begin{algorithm}[t]
+            \caption[Kalman Estimate]{Kalman Estimate}
+            \label{alg:kalman_estimate}
+            \begin{algorithmic}[1]
+                \Require $O = \left\{\bm{o}_t \mid t \in \mathcal{T} \subset \mathbb{N}_+\right\}, T$
+                \Ensure $\hat{\bm{s}}_T$
+                \State $\textbf{Initialize: } F, Q, H, R, \Sigma_{0 \mid 0}, \bm{\mu}_{0 \mid 0} = initial\_estimate()$
+                \For {$t = 1 \text{ to } T$}
+                    \State $\bm{\mu}_{t \mid t-1} = F \bm{\mu}_{t-1 \mid t-1}$
+                    \State $\Sigma_{t \mid t-1} = F \Sigma_{t-1 \mid t-1} F^{\top} + Q$
+                    \State $\hat{\bm{s}}_t = \bm{\mu}_{t \mid t-1}$
+                    \If {$ \bm{o}_t \in O $}
+                        \State $K_t = \Sigma_{t \mid t-1} H^{\top} \left( H \Sigma_{t \mid t-1} H^{\top} + R\right)$
+                        \State $\bm{\mu}_{t \mid t} = \bm{\mu}_{t \mid t-1} + K_t \left( \bm{o}_t - H \bm{\mu}_{t \mid t-1} \right)$
+                        \State $\Sigma_{t \mid t} = \left( I - K_t H \right) \Sigma_{t \mid t-1}$
+                        \State $\hat{\bm{s}}_t = \bm{\mu}_{t \mid t}$
+                    \EndIf
+                \EndFor
+                \State \Return $\hat{\bm{s}}_T$
+            \end{algorithmic}
+        \end{algorithm}
 
-    \begin{algorithm}[t]
-        \caption[Kalman Predict]{Kalman Predict}
-        \label{alg:kalman_predict}
-        \begin{algorithmic}[1]
-            \Require $O = \left\{\bm{o}_t \mid t \in \mathcal{T} \subset \mathbb{N}_+\right\}, T$
-            \Ensure $\hat{\bm{o}}_T$
-            \State $\textbf{Initialize: } F, Q, H, R, \Sigma_{0 \mid 0}, \bm{\mu}_{0 \mid 0} = initial\_estimate()$
-            \For {$t = 1 \text{ to } T$}
-                \State $\bm{\mu}_{t \mid t-1} = F \bm{\mu}_{t-1 \mid t-1}$
-                \State $\Sigma_{t \mid t-1} = F \Sigma_{t-1 \mid t-1} F^{\top} + Q$
-                \State $\hat{\bm{o}}_t = H \bm{\mu}_{t \mid t-1}$
-                \If {$ \bm{o}_t \in O $}
-                    \State $K_t = \Sigma_{t \mid t-1} H^{\top} \left( H \Sigma_{t \mid t-1} H^{\top} + R\right)$
-                    \State $\bm{\mu}_{t \mid t} = \bm{\mu}_{t \mid t-1} + K_t \left( \bm{o}_t - H \bm{\mu}_{t \mid t-1} \right)$
-                    \State $\Sigma_{t \mid t} = \left( I - K_t H \right) \Sigma_{t \mid t-1}$
-                    \State $\hat{\bm{o}}_t = H \bm{\mu}_{t \mid t}$
-                \EndIf
-            \EndFor
-            \State \Return $\hat{\bm{o}}_T$
-        \end{algorithmic}
-    \end{algorithm}
+        \begin{algorithm}[t]
+            \caption[Kalman Predict]{Kalman Predict}
+            \label{alg:kalman_predict}
+            \begin{algorithmic}[1]
+                \Require $O = \left\{\bm{o}_t \mid t \in \mathcal{T} \subset \mathbb{N}_+\right\}, T$
+                \Ensure $\hat{\bm{o}}_T$
+                \State $\textbf{Initialize: } F, Q, H, R, \Sigma_{0 \mid 0}, \bm{\mu}_{0 \mid 0} = initial\_estimate()$
+                \For {$t = 1 \text{ to } T$}
+                    \State $\bm{\mu}_{t \mid t-1} = F \bm{\mu}_{t-1 \mid t-1}$
+                    \State $\Sigma_{t \mid t-1} = F \Sigma_{t-1 \mid t-1} F^{\top} + Q$
+                    \State $\hat{\bm{o}}_t = H \bm{\mu}_{t \mid t-1}$
+                    \If {$ \bm{o}_t \in O $}
+                        \State $K_t = \Sigma_{t \mid t-1} H^{\top} \left( H \Sigma_{t \mid t-1} H^{\top} + R\right)$
+                        \State $\bm{\mu}_{t \mid t} = \bm{\mu}_{t \mid t-1} + K_t \left( \bm{o}_t - H \bm{\mu}_{t \mid t-1} \right)$
+                        \State $\Sigma_{t \mid t} = \left( I - K_t H \right) \Sigma_{t \mid t-1}$
+                        \State $\hat{\bm{o}}_t = H \bm{\mu}_{t \mid t}$
+                    \EndIf
+                \EndFor
+                \State \Return $\hat{\bm{o}}_T$
+            \end{algorithmic}
+        \end{algorithm}
 
-    式\ref{eq:estimation_equations_with_K}を用いて，時刻$T$までの観測系列$\bm{o}_1, \dots, \bm{o}_T$を入力として状態変数$\bm{s}_T$の推定を行うアルゴリズムをアルゴリズム\ref{alg:kalman_estimate}に示す．ただしここでは簡易化のため，状態遷移式および観測方程式における各変数は定常なものであるとした．またアルゴリズムに示すように，観測系列に抜け落ちがある場合でも，その時刻は式\ref{eq:posterior_with_bayes}に相当する処理を行わず，次の時刻の処理に移れば問題なく推定が可能である．
+        式\ref{eq:estimation_equations_with_K}を用いて，時刻$T$までの観測系列$\bm{o}_1, \dots, \bm{o}_T$を入力として状態変数$\bm{s}_T$の推定を行うアルゴリズムをアルゴリズム\ref{alg:kalman_estimate}に示す．ただしここでは簡易化のため，状態遷移式および観測方程式における各変数は定常なものであるとした．またアルゴリズムに示すように，観測系列に抜け落ちがある場合でも，その時刻は式\ref{eq:posterior_with_bayes}に相当する処理を行わず，次の時刻の処理に移れば問題なく推定が可能である．
 
-    またカルマンフィルタでは，時刻$t$までの観測系列が得られたときに，時刻$t+1$の状態予測だけではなく，観測変数の予測も行うことができる．これを行うためには，式\ref{eq:estimation_equations_with_K}で計算される$\bm{s}_{t+1}$の期待値および分散と式\ref{eq:kalman_GL}の観測方程式から観測予測を行う．このアルゴリズムをアルゴリズム\ref{alg:kalman_predict}に示す．これは単に，アルゴリズム\ref{alg:kalman_estimate}の処理に観測行列$H$による変換を行っただけである（\ref{alg:kalman_predict}の10行目）．
+        またカルマンフィルタでは，時刻$t$までの観測系列が得られたときに，時刻$t+1$の状態予測だけではなく，観測変数の予測も行うことができる．これを行うためには，式\ref{eq:estimation_equations_with_K}で計算される$\bm{s}_{t+1}$の期待値および分散と式\ref{eq:kalman_GL}の観測方程式から観測予測を行う．このアルゴリズムをアルゴリズム\ref{alg:kalman_predict}に示す．これは単に，アルゴリズム\ref{alg:kalman_estimate}の処理に観測行列$H$による変換を行っただけである（\ref{alg:kalman_predict}の10行目）．
 
     \subsection{SORTのアルゴリズム}
     \label{subsec:sort_algorithm}
@@ -382,10 +382,10 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
     そこでSORTでは，類似度にIntersection of Union（以後IoUと表記する）を用いる．IoUは重なりあう領域がまったくない場合$0$になるため，非常に対応付けに保守的であり，間違った対応付けをしなくて済む．そして保守的になった分対応づきにくくなる問題に対しては，カルマンフィルタによるバウンディングボックスの予測によって解決する．もし仮に物体がフレームレートに対して大きい速度を持っている場合には，IoUは限りなく0になりやすくなってしまう．しかし速度や加速度を知っていれば時刻$t$のバウンディングボックスの位置を予測でき，速度などによらずIoUを高めることができる．すなわち速度や加速度を含んだ状態変数のカルマンフィルタを設計し，バウンディングボックスの予測を行う．
 
-    SORTでは，バウンディングボックスの状態変数を，位置，大きさ，そして位置の一階微分である速度で表す．すなわち時刻$t$における観測変数$\bm{o}_t$は，
+    SORTでは，バウンディングボックスの状態変数を，位置，大きさ，そして位置の一階微分である速度で表す．すなわち時刻$t$における状態変数$\bm{s}_t$は，
     \begin{equation}
         \label{eq:sort_state_vector}
-        \bm{o}_t = \left[x, \dot{x}, y, \dot{y}, w, h\right]
+        \bm{s}_t = \left[x, \dot{x}, y, \dot{y}, w, h\right]
     \end{equation}
     で表される．このとき遷移行列$F_t$は，線形関係式
     \begin{equation}
@@ -398,9 +398,18 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \end{equation}
     を満たすように設計される．ただし$a_t$は正規性をもつノイズであり，システムに対して加速度として加算される．また$A_x$はその分散を表す．ここでは冗長性のため$x$のみに対する関係を記述したが，$y$についても同様の関係が成り立つ．また観測行列$H_t$は，状態変数の$0$階微分成分をそのまま利用するように設計される．
 
-    SORTのアルゴリズムをアルゴリズム\ref{alg:sort}に示す．ただしここでの出力はIDごとの観測系列になっていることに注意されたい．アルゴリズム\ref{alg:object_detection_and_reidentification}でも示したように，Tracking-by-Detectionでは時刻$t$のReIDにおいて，時刻$t-1$までのReID結果$O_1, O_2, \dots, O_{t-1}$を得ている．これをIDごとに分ければ，各個体の軌跡，言い換えれば観測系列を得ることができる．これを用いてSORTは，時刻$t$のバウンディングボックス群$B_t$を得たときに，はじめに$B_t$の予測を行う（8-9行目）．そしてその予測バウンディングボックスと実際に検出されたバウンディングボックス群とでハンガリー法による対応付けを行う（12行目）．そして対応付けられたバウンディングボックスを軌跡$O^{(i)}$に加える（14-16行目）．また明瞭さのため省略したが，実際には対応づかなかった検出バウンディングボックスを新しいIDの個体とし，軌跡に加える．また18-19行目では，時刻$t-1$で追跡を行っている各物体に対して，何時刻対応付けがなかったのかを計算し，ある閾値$\sigma_{\text{act}}$以上の間対応付けがなかったものは追跡を止めている．
+    SORTのアルゴリズムをアルゴリズム\ref{alg:sort}に示す．ただしここでの出力はIDごとの観測系列になっていることに注意されたい．アルゴリズム\ref{alg:object_detection_and_reidentification}でも示したように，Tracking-by-Detectionでは時刻$t$のReIDにおいて，時刻$t-1$までのReID結果$O_1, O_2, \dots, O_{t-1}$を得ている．これをIDごとに分ければ，各個体の軌跡，言い換えれば観測系列を得ることができる．これを用いてSORTは，時刻$t$のバウンディングボックス群$B_t$を得たときに，はじめに$B_t$の予測を行う（8-9行目）．そしてその予測バウンディングボックスと実際に検出されたバウンディングボックス群とでハンガリー法による対応付けを行う（12行目）．そして対応付けられたバウンディングボックスを軌跡$O^{(i)}$に加える（14-16行目）．ここまでがSORTの基本的な時刻$t$における処理である．
+    
+    また明瞭さのため省略したが，実際には対応づかなかった検出バウンディングボックスを新しいIDの個体とし，軌跡に加える．このときのバウンディングボックスを$[x,y,w,h]$とすると，この時刻以降のカルマンフィルタの観測予測は，事後分布の初期期待値を
+    \begin{equation}
+        \label{eq:SORT_kalman_initialize}
+        \begin{aligned}
+            \bm{\mu}_{0 \mid 0} = \left[x, 0, y, 0, w, h\right]
+        \end{aligned}
+    \end{equation}
+    として計算する．
 
-    閾値$\sigma_{\text{act}}$は，検出の精度にも依存している．仮に物体検出で見逃し（FN）が多い場合には，この値を大きくする方が望ましい．しかし対象の個体数が多い場合には，別の個体が対応付けの候補になってしまうため注意が必要である．
+    また18-19行目では，時刻$t-1$で追跡を行っている各物体に対して，何時刻対応付けがなかったのかを計算し，ある閾値$\sigma_{\text{act}}$以上の間対応付けがなかったものは追跡を止めている．閾値$\sigma_{\text{act}}$は，検出の精度にも依存している．仮に物体検出で見逃し（FN）が多い場合には，この値を大きくする方が望ましい．しかし対象の個体数が多い場合には，別の個体が対応付けの候補になってしまうため注意が必要である．
 
     \subsection{既存手法の問題点}
     \label{subsec:existing_problem}
@@ -421,15 +430,23 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 \section{新しいカルマンフィルタの設計および三次元スライス画像のReID手法}
 \label{sec:proposed_method}
 
-    本章では，はじめに提案手法の概要を述べた後，提案部分であるSliceKalmanFilterおよびSORT+DepthSORTによるReIDについて詳細に述べる．
+本章では，はじめに提案手法の概要を述べた後，提案部分であるSliceKalmanFilterおよびSORT+DepthSORTによるReIDについて詳細に述べる．
 
-    提案手法では，既存手法と同様Tracking-by-Detectionの枠組みに則り，物体検出手法に関しては既存手法と同様YOLOを使用する．すなわち，スライス二次元画像入力$\mathcal{X}_t = \left\{X_{t, s} \mid s \in {1, \dots, n_s}\right\}$をそれぞれ独立にYOLOに入力し，それぞれバウンディングボックスの集合$B_{t,s} = \left\{\bm{b}_{t,s}^{(j)}\right\}$を得る．添字の$(t,s)$は，時刻$t$における$s$番目のスライスを表している．
+    \subsection{提案手法のパイプライン概要}
+    \label{subsec:proposed_pipeline}
 
-    続くReIDでは既存手法と異なり，複数のスライスに対応した$B_{t,1}, B_{t,2}, \dots, B_{t,n_s}$が入力となる．出力としては既存手法のReIDおよびSORTと同様に，各集合に含まれるすべてのバウンディングボックス$\bm{b}$にIDを与えたものが得られる．提案手法ではDepthSORTという高さ方向のSORTを実施することで同時刻のスライス間で対応付けを行う．これにより，後続のカルマンフィルタに三次元的な観測変数を渡すことができる．
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=\linewidth]{fig/proposed_pipeline.pdf}
+        \caption[提案手法を組み込んだパイプライン概要]{提案手法を組み込んだパイプライン概要：}
+        \label{fig:proposed_pipeline}
+    \end{figure}
 
-    最後に新たに設計を行うカルマンフィルタでは，異なるスライスに対応した複数のバウンディングボックスを観測変数として，三次元的な状態の推定を行う．このカルマンフィルタをSliceKalmanFilterと呼ぶこととする．この設計では，非線形な写像に対応するための拡張カルマンフィルタと，新たに提案する可変的な観測変数によって達成される．
+    提案手法では，既存手法と同様Tracking-by-Detectionの枠組みに則り，物体検出手法に関しては既存手法と同様YOLOを使用する．すなわち，スライス二次元画像入力$\mathcal{X}_t = \left\{X_{t, s} \mid s \in {1, \dots, n_s}\right\}$をそれぞれ独立にYOLOに入力し，それぞれバウンディングボックスの集合$B_{t,s} = \left\{\bm{b}_{t,s}^{(j)}\right\}$を得る（図\ref{fig:proposed_pipeline}の(1) Object Detection）．添字の$(t,s)$は，時刻$t$における$s$番目のスライスを表している．
 
-    以降の節では，前章で説明した問題点の順番に習い，まずはじめにSliceKalmanFilterの設計を行い，その後にSliceKalmanFilterの観測系列を得るためのReID手法の説明に移る．
+    続くReIDでは既存手法と異なり，複数のスライスに対応した$B_{t,1}, B_{t,2}, \dots, B_{t,n_s}$が入力となる．出力としては既存手法のReIDおよびSORTと同様に，各集合に含まれるすべてのバウンディングボックス$\bm{b}$にIDを与えたものが得られる（図\ref{fig:proposed_pipeline}の(2) Re-Identification）．提案手法ではDepthSORTという高さ方向のSORTを実施することで同時刻のスライス間で対応付けを行う．これにより，後続のカルマンフィルタに三次元的な観測変数を渡すことができる．
+
+    最後に新たに設計を行うカルマンフィルタでは，異なるスライスに対応した複数のバウンディングボックスを観測変数として，三次元的な状態の推定を行う（図\ref{fig:proposed_pipeline}の(3) State Estimation）．このカルマンフィルタをSliceKalmanFilterと呼ぶこととする．この設計では，非線形な写像に対応するための拡張カルマンフィルタと，新たに提案する可変的な観測変数によって達成される．
 
 
     \subsection{三次元スライス画像に対応したカルマンフィルタ}
@@ -528,6 +545,29 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
                 h(\bm{s}_t) = \text{Concat.}\left(\left\{h_s(\bm{s}_t) \mid s \in \mathcal{S}_t^{\text{pred}} \cup \mathcal{S}_t^{\text{obs}}\right\}\right)
             \end{equation}
             で表される．
+
+            \subsubsection{SliceKalmanFilterの初期化}
+
+            SORTにおけるカルマンフィルタの初期化は，\ref{eq:SORT_kalman_initialize}に示すようにバウンディングボックスの変数を状態変数に代入することで行われていた．しかしながら複数のバウンディングボックス集合$O_t$を観測変数に持つSliceKalmanFilterでは，状態変数に直接代入できる変数が観測変数にない．よってSliceKalmanFilterの初期化では，
+            \begin{equation}
+                \label{eq:SKF_kalman_initialize}
+                \begin{aligned}
+                    x &= \frac{1}{\left|O_t\right|} \sum_{\bm{b}_{t,s} \in O_t} x_{t,s}
+                    \\ y &= \frac{1}{\left|O_t\right|} \sum_{\bm{b}_{t,s} \in O_t} y_{t,s}
+                    \\ z &= \frac{\delta z}{\left|O_t\right|} \sum_{\bm{b}_{t,s} \in O_t} s 
+                    \\ r &= \frac{1}{2} \max \left(\left\{w_{t,s}, ~ h_{t,s} \mid s \in \mathcal{S}_t^{\text{obs}}\right\}\right)
+                \end{aligned}
+            \end{equation}
+            のように初期化を行う．また速度項についてはSORTと同様に$0$で初期化する．
+
+            \begin{figure}[t]
+                \centering
+                \includegraphics[width=\linewidth]{fig/bad_initialize.pdf}
+                \caption[初期化におけるスライス画像取得のタイミングの影響]{初期化におけるスライス画像取得のタイミングの影響：}
+                \label{fig:bad_initialize}
+            \end{figure}
+
+            さらにSliceKalmanFilterの初期化は，推定の安定を図るために二時刻連続で行う．物体がある時刻で生成されるとき，各高さのスライス画像が取得されるタイミングによっては，図\ref{fig:bad_initialize}のように取得されるバウンディングボックスの情報が不十分になる．これにより，式\ref{eq:SKF_kalman_initialize}において$z$および$r$の推定精度が低くなる．よって十分なバウンディングボックスを利用した推定を行うために，生成された後二時刻分は式\ref{eq:SKF_kalman_initialize}による初期化を行う．
 
     \subsection{三次元スライス画像に対応したReID}
     \label{subsec:re-identificataion_for_slice}
