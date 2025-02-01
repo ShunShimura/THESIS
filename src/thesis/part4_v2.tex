@@ -278,6 +278,35 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
     \subsection{物体検出の誤検出が及ぼす影響}
     \label{subsec:FPeffect}
 
+    まず問題を切り分け，誤検出（FP）が追跡に及ぼす影響を評価する．本項では，検証用データ作成手順4において，検出に誤検出が含まれる割合を$r_{\text{FP}} \in [0, 1]$として定め，各画像ごとに誤検出割合が$r_{\text{FP}}$になるように偽のバウンディングボックスを生成する．このときバウンディングボックスの位置$(x,y)$は$[0, \ell]$から一様サンプリングし，サイズ$(w, h)$は$[r_{\text{min}}, r_{\text{max}}]$から一様サンプリングしたのち二倍した値を共通して与える．またこのバウンディングボックスが領域$[0, 1]^2$を超える場合は，$[0, 1]$にクランプする．
+
+        \subsubsection{結果}
+
+        \begin{figure}[t]
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/meanIoUs_with_fp.pdf}
+            \end{subfigure}
+            \\
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/count_with_fp.pdf}
+            \end{subfigure}
+            \\
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/reid_with_fp.pdf}
+            \end{subfigure}
+            \caption[物体検出のFPが追跡に及ぼす影響]{物体検出のFPが追跡に及ぼす影響：}
+            \label{fig:FP_effect}
+        \end{figure}
+
+        誤検出率$r_{\text{FP}}$を$0.1$から$0.5$まで変化させたときの状態変数およびReIDに及ぼす影響を図\ref{fig:FP_effect}に示す．まず状態推定ついては，FPの割合を変更させたときに推定精度の挙動は変わるものの，全体的な変化は見られなかった．これはすなわち，物体検出のFPとFNのトレードオフを考える際に，FNを優先して信頼度スコアの閾値を低くすれば良いことを示唆している．
+
+        一方ReIDの精度に着目すると，AssAはあまり変化しないもののIDSWでは変化が見られた．これはつまり，ある個体由来のバウンディングボックスが複数の物体として分裂して認識されているが，ほとんどのバウンディングボックスが一つのIDに割り当てられ，分裂したバウンディングボックスが少量であったと推測できる．すなわちReIDにおいてもFPの大きな影響がないことが分かる．
+
+        これらの結果は，ほとんどの対応付けをIoUベースで実施していることが理由として考えられる．IoUをベースにする場合，たとえFPの割合が大きいとしても，正しい対応付けに影響するのは，TPのバウンディングボックスに対してIoUが$0$より大きいFPのバウンディングボックスのみである．よってFPの割合が大きくてもあまり精度に影響が出なかったと考えれる．
+
     \subsection{物体検出の見逃しが及ぼす影響}
     \label{subsec:FNeffect}
 
