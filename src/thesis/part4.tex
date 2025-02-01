@@ -1,14 +1,14 @@
 \thispagestyle{fancy2}
 
-提案手法のパイプラインは大きく分けて，（１）物体検出，（２）ReIDによる観測系列の取得，そして（３）カルマンフィルタによる状態推定の三つに分けられ，提案部分はこの（２）と（３）であった．よって評価のために理想的な物体検出の結果を生成するデモデータの作成を行う．よって第四部ではまず，デモデータの作成方法をはじめに述べ（\ref{sec:demodata}），そのあとにデモデータに対して提案部分であるReIDと状態推定の評価を行う（\ref{sec:pipeline}）．また本研究においてスライス数の設定は結果に大きな影響を与えるハイパーパラメータである．よってこのスライス数を変化した場合の評価を次に行う（\ref{sec:number_of_slice}）．そして最後に，物体検出を考慮した評価を行う．この物体検出の評価では，実際の対象である共焦点顕微鏡から得られた細胞のデータを適応し，どのような結果が得られるかを評価する（\ref{sec:cell_detection}）．そして最後の章で，この検出の結果が全体のパイプラインにどのような影響を与えるかを評価し，またその対処方法について議論する（\ref{sec:covering_detection}）．
+共焦点顕微鏡から得られるデータで複数物体追跡を行う場合のパイプラインは大きく分けて，（1）物体検出，（2）ReIDによる観測系列の取得，そして（3）カルマンフィルタによる状態推定の三つに分けられ，提案部分はこの（2）と（3）であった．そのため理想的な物体検出を想定し，検証用データを用いて提案部分の評価を行う．よって本章では，まずはじめに検証用データの作成方法をはじめに述べ（\ref{sec:demodata}節），提案部分のパイプライン評価を行う（\ref{sec:pipeline_evaluation}節）．そして詳細な評価のために，続く節ではReIDと状態推定を段階的に評価する（\ref{sec:stage_evaluation}節）．また本研究において，対象空間をどれだけ細かくスライスするかを決めるスライス数は，重要なハイパーパラメータである．よってこのスライス数を変化させた場合の影響を評価する（\ref{sec:number_of_slice_effect}節）．また最後の節では，実際のプロトプラスト化した細胞を対象として物体検出の評価を行い，この精度が後続のReIDおよび状態推定に及ぼす影響および対処方法を議論する（\ref{sec:pipleline_evaluation_with_detection}節）．
 
-\section{デモデータの生成方法}
+\section{検証用データの作成方法}
 \label{sec:demodata}
 
-本章ではデモデータの作成手順を順に述べる．基本的な数式は\ref{sec:setting}で説明した問題設定の数式を再掲している．また本論文では，対象空間の広さを常に$\ell = 100$に固定している．またこの章では\ref{sec:setting}で用いた離散時刻と連続時刻を用いるため，再度$t$を連続時刻，$\tau$を離散時刻として扱う．
+本章では検証用データの作成手順を順に述べる．基本的な数式は\ref{sec:setting}で説明した問題設定の数式を再掲している．また本論文では，対象空間の広さを常に$\ell = 100$に固定している．またこの章では\ref{sec:setting}で用いた離散時刻と連続時刻を用いるため，再度$t$を連続時刻，$\tau$を離散時刻として扱う．
 
 \begin{enumerate}[label=手順\arabic*]
-    \item 連続的な時刻$t=0$において設定した物体数$n_b$個の物体のランダム生成を行う．物体の状態変数は式\ref{eq:continous_state_vecotr}で表される位置や，それらを微分した速度，加速度で表される．よってデモデータを生成する際にはこれらの値を決める必要がある．本研究では位置は$[0, \ell]$，速度はハイパーパラメータ$v_{\text{range}}$を用いた$[-v_{\text{range}}, v_{\text{range}}]$，半径はハイパーパラメータ$r_{\text{min}}, r_{\text{max}}$を用いて$[r_{\text{min}}, r_{\text{max}}]$から一様サンプリングして初期化する．また加速度は$0$で初期化する．
+    \item 連続的な時刻$t=0$において設定した物体数$n_b$個の物体のランダム生成を行う．物体の状態変数は式\ref{eq:continous_state_vecotr}で表される位置や，それらを微分した速度，加速度で表される．よって検証用データを生成する際にはこれらの値を決める必要がある．本研究では位置は$[0, \ell]$，速度はハイパーパラメータ$v_{\text{range}}$を用いた$[-v_{\text{range}}, v_{\text{range}}]$，半径はハイパーパラメータ$r_{\text{min}}, r_{\text{max}}$を用いて$[r_{\text{min}}, r_{\text{max}}]$から一様サンプリングして初期化する．また加速度は$0$で初期化する．
     \item 次に，連続的な物体の挙動を再現するために，$dt=0.01$など小さな値を用いて位置，速度，加速度を更新する．このときの更新式は式\ref{eq:sort_transition}と同様に，
     \begin{equation}
         \label{eq:transition}
@@ -21,155 +21,167 @@
     で計算される．すなわち物体に加えられる外力は正規的なランダム力だとする．ここで冗長性のため$x$に対しての式のみ記している．また加速度に加えられるノイズの分散は$x, y, z$ですべて共通とし，ハイパーパラメータ$\sigma_{\text{noise}}$として設定する．
     \item 共焦点顕微鏡が一枚の二次元画像を取得するのにかかる時間が$t_c$である場合，連続的な時刻が$t_c$の整数倍になるタイミングで画像の取得を行う．この$t / t_c$は\ref{sec:setting}で述べた離散時刻$\tau$に相当する．この画像は\ref{sec:setting}で説明した式\ref{eq:appearant_radius}や式\ref{eq:circle_region}に応じて生成する．またこのときのスライス$s$の値は，離散時刻$\tau$をさらに$n_s$で割った余りである．これにより，$n_s$枚取得するまでは取得のたびにスライスの高さが式\ref{eq:delta_time_and_z}における$\delta z$ずつ高くなり，$n_s$枚に達したところで$s = 0$に戻る．
     \item 手順3の画像取得と同時に，評価に必要な正解ラベルも生成する．まずReIDと状態推定の評価のために検出バウンディングボックスの正解ラベルを生成する．このバウンディングボックスの$(x, y)$には，各物体の連続的な位置$x(t), y(t)$を採用し，$(w, h)$には式\ref{eq:appearant_radius}で示した見かけ上の半径$r_{\text{app}}(t)$の二倍の値を用いる．また状態推定の評価のために，各物体について一つの$\tau$につき一つの状態変数を生成する．状態推定で推定する状態変数は$s = 0$の画像が取得された時刻での状態を示すため，$s = 0$の画像が取得されるタイミングで各物体の位置を出力する．
-    \item デモデータの生成ではランダムな加速度を与えているため，物体が対象領域$\Omega$を出てしまうことも考えられる．すると速度範囲を変えた際などに平等な評価を行うことが困難になるため，領域を出てしまった時点でその分の新しい物体の生成を行う．この生成方法は手順1と同様である．物体のすべての領域が対象領域$\Omega$と共通部分を持たなくなったら領域を出たと判断する．
+    \item 検証用データの生成ではランダムな加速度を与えているため，物体が対象領域$\Omega$を出てしまうことも考えられる．すると速度範囲を変えた際などに平等な評価を行うことが困難になるため，領域を出てしまった時点でその分の新しい物体の生成を行う．この生成方法は手順1と同様である．物体のすべての領域が対象領域$\Omega$と共通部分を持たなくなったら領域を出たと判断する．
 \end{enumerate}
 
-以降の実験では特記しない限り，$n_b = 10$，$v_{\text{range}} = 0.1$，$r_{\text{min}} = 5$ ，$r_{\text{max}} = 10$，$\sigma_{\text{noise}} = 0.01$，$t_c = 1$，$n_s = 101$を基準のデモデータとして使用する．
+以降の実験では特記しない限り，$n_b = 10$，$v_{\text{range}} = 0.1$，$r_{\text{min}} = 5$ ，$r_{\text{max}} = 10$，$\sigma_{\text{noise}} = 0.01$，$t_c = 1$，$n_s = 101$を基準の検証用データとして使用する．
 
-\section{ReIDと状態推定のパイプライン評価}
-\label{sec:pipeline}
+\section{提案手法のパイプライン評価}
+\label{sec:pipeline_evaluation}
 
-    本章では，共焦点顕微鏡から得られた画像データを物体検出にかけて得られたバウンディングボックス群を入力とし，各物体の三次元情報を推定，予測するReID+状態推定のパイプライン評価を行う．今回はデモデータを用いることで，FPとFNが存在しない理想的な物体検出が行われたとして上記の評価を行う．またここでいう状態推定とは，時刻$t-1$までの物体検出情報が得られたときの，時刻$t$の状態の推定のことを指す．
+本章では，検証用データを使用して理想的な物体検出をしたときのReIDと状態推定からなるパイプラインの精度評価を行う．またここでは状態推定そのものを評価せず，時刻$t-1$までの物体検出の出力が得られたときの，時刻$t$の状態予測の精度を評価する．実際にはこの状態予測にしたがってマイクロロボットによる細胞の取得が行われるためである．
 
-    また続く節では，ReIDと状態推定を別々にして評価を行う．ReID手法の評価では，\ref{sec:proposed_method}章で提案した四つの手法の評価および議論を行う．また状態推定の評価では，SliceKalmanFilterの詳細な評価と直感的な手法との比較を行う．
+\subsubsection{実装詳細}
+パイプライン評価では表\ref{tab:reidentification_methods}に示す四つの手法を評価する．時間方向の追跡を打ち切る閾値は$\sigma_{\text{sort-act}} = 3$，空間方向の追跡を打ち切る閾値は$\sigma_{\text{d-sort-act}} = 1$とした．またすべてのカルマンフィルタにおいて，システムノイズ分散は$100$，
+観測ノイズの大きさは$1.0$，初期時刻における推定状態分散は$\Sigma_0 = 100 * I_n$とする．ここでの$n$は状態変数の長さであり$I_n$は$n$次の単位行列である．また動作環境は，OSがUnuntu 20.04.6 LTS（Focal Fossa）であり，CPUがIntel(R) Xeon(R) Gold 6338 CPU @ 2.00GHzの32コアである．
 
-    \subsection{パイプライン評価}
-    \label{subsec:pipeline_evaluation}
+\subsubsection{比較手法}
+本実験ではReIDに\ref{sec:existing_method}で説明したSORTと外観情報を用いずに高精度なReIDを達成するByteTrack\cite{zhang2022bytetrack}を適用したものを比較手法として評価する．これらの比較手法は単一のスライスにしか適用できないため，各スライスで追跡される情報を独立したものとしてReIDの結果を得る．またこれらの比較手法では，単純な状態推定を行う．すなわち，単一のスライス$s$におけるバウンディングボックスの軌跡から予測された時刻$t + 1$のバウンディングボックスが，$[x, y, w, h]$で表されるとき，時刻$t+1$の状態推定値$\bm{s}_{t+1}^{\text{pred}}$を，
+\begin{equation}
+    \label{eq:naive_state_estimation}
+    \bm{s}^{\text{pred}}_{t+1} = \left[x,~ 0,~ y,~ 0,~ s \delta z,~ 0,~ \frac{\max(w, h)}{2}\right]
+\end{equation}
+として得る．すなわち物体の中心がそのスライス上かつバウンディングボックスの中心に一致し，そのバウンディングボックスが球体の半径を用いて表せられる円に外接しているとして推定している．
 
-        \subsubsection{実装詳細}
-        パイプライン評価では表\ref{tab:reidentification_methods}に示す四つの手法を評価する．時間方向の追跡を打ち切る閾値は$\sigma_{\text{sort-act}} = 3$，空間方向の追跡を打ち切る閾値は$\sigma_{\text{d-sort-act}} = 1$とした．またすべてのカルマンフィルタにおいて，システムノイズ分散は$100$，
-        観測ノイズの大きさは$1.0$，初期時刻における推定状態分散は$\Sigma_0 = 100 * I_n$とする．ここでの$n$は状態変数の長さであり$I_n$は$n$次の単位行列である．また動作環境は，OSがUnuntu 20.04.6 LTS（Focal Fossa）であり，CPUがIntel(R) Xeon(R) Gold 6338 CPU @ 2.00GHzの32コアである．
+\subsubsection{評価指標}
 
-        \subsubsection{比較手法}
-        本実験ではReIDに\ref{sec:existing_method}で説明したSORTと外観情報を用いずに高精度なReIDを達成するByteTrack\cite{zhang2022bytetrack}を適用したものを比較手法として評価する．これらの比較手法は単一のスライスにしか適用できないため，各スライスで追跡される情報を独立したものとしてReIDの結果を得る．またこれらの比較手法では，単純な状態推定を行う．すなわち，単一のスライス$s$におけるバウンディングボックスの軌跡から予測された時刻$t + 1$のバウンディングボックスが，$[x, y, w, h]$で表されるとき，時刻$t+1$の状態推定値$\bm{s}_{t+1}^{\text{pred}}$を，
-        \begin{equation}
-            \label{eq:naive_state_estimation}
-            \bm{s}^{\text{pred}}_{t+1} = \left[x,~ 0,~ y,~ 0,~ s \delta z,~ 0,~ \frac{\max(w, h)}{2}\right]
-        \end{equation}
-        として得る．すなわち物体の中心がそのスライス上かつバウンディングボックスの中心に一致し，そのバウンディングボックスが球体の半径を用いて表せられる円に外接しているとして推定している．
-        
-        \subsubsection{評価指標}
-        
-        ReIDの状態推定を組み合わせたパイプラインの出力は，時刻$t$において追跡している各物体$i \in \mathcal{I}_t$の時刻$t+1$の状態推定$\bm{s}_{t+1}$である．この状態推定値の推定精度を評価するために，三次元空間における予測球体と正解ラベル球体の共通領域度合いを示すIoUの平均値（以後meanIoUと呼ぶ）を用いる．ある二つの球体$\bm{s}_1 = [x_1, y_1, z_1, r_1]$と$\bm{s}_2 = [x_2, y_2, z_2, r_2]$が存在するとき，IoU$(\bm{s}_1, \bm{s}_2)$は，
-        \begin{equation}
-            \label{eq:sphere_iou}
+ReIDの状態推定を組み合わせたパイプラインの出力は，時刻$t$において追跡している各物体$i \in \mathcal{I}_t$の時刻$t+1$の状態推定$\bm{s}_{t+1}$である．この状態推定値の推定精度を評価するために，三次元空間における予測球体と正解ラベル球体の共通領域度合いを示すIoUの平均値（以後meanIoUと呼ぶ）を用いる．ある二つの球体$\bm{s}_1 = [x_1, y_1, z_1, r_1]$と$\bm{s}_2 = [x_2, y_2, z_2, r_2]$が存在するとき，IoU$(\bm{s}_1, \bm{s}_2)$は，
+\begin{equation}
+    \label{eq:sphere_iou}
+    \begin{aligned}
+        d &= \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2 + (z_1 - z_2)^2}
+        \\V_{\text{inter}} &= \left\{
             \begin{aligned}
-                d &= \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2 + (z_1 - z_2)^2}
-                \\V_{\text{inter}} &= \left\{
-                    \begin{aligned}
-                        &\frac{\pi}{12 d} \left\{d - (r_1 + r_2)\right\}^2 \left\{d^2 + 2(r_1 + r_2)d - 3 (r_1 - r_2)^2\right\},& \quad &\textbf{if } d < r_1 + r_2
-                        \\ & 0,& &\textbf{else} 
-                    \end{aligned}
-                \right.
-                \\\text{IoU}(\bm{s}_1, \bm{s}_2) &= \frac{V_{\text{inter}}}{\frac{4}{3}\pi r_1^2 + \frac{4}{3}\pi r_2^2 - V_{\text{inter}}}
+                &\frac{\pi}{12 d} \left\{d - (r_1 + r_2)\right\}^2 \left\{d^2 + 2(r_1 + r_2)d - 3 (r_1 - r_2)^2\right\},& \quad &\textbf{if } d < r_1 + r_2
+                \\ & 0,& &\textbf{else} 
             \end{aligned}
-        \end{equation}
-        で表される．
+        \right.
+        \\\text{IoU}(\bm{s}_1, \bm{s}_2) &= \frac{V_{\text{inter}}}{\frac{4}{3}\pi r_1^2 + \frac{4}{3}\pi r_2^2 - V_{\text{inter}}}
+    \end{aligned}
+\end{equation}
+で表される．
 
-        meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算し，これらの平均値を取る．また評価の際には，予測されたある球体が正解ラベルの球体におけるどの球体に対応する予測なのかを知ることができない．よって評価の際にはスコアであるmeanIoUが最大になるようにこの対応付けを行う．すなわち$f_{\text{sim}}$をIoUとしたアルゴリズム\ref{alg:hungarian_matching}を利用する．
+meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算し，これらの平均値を取る．また評価の際には，予測されたある球体が正解ラベルの球体におけるどの球体に対応する予測なのかを知ることができない．よって評価の際にはスコアであるmeanIoUが最大になるようにこの対応付けを行う．すなわち$f_{\text{sim}}$をIoUとしたアルゴリズム\ref{alg:hungarian_matching}を利用する．
+
+\subsubsection{結果}
+
+\begin{figure}[t]
+    \begin{subfigure}[t]{0.5\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{fig/meanIoUs.pdf}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{.5\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{fig/part4/singleIoU.pdf}
+    \end{subfigure}
+    \\    
+    \begin{subfigure}[t]{0.5\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{fig/prediction_count.pdf} 
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{.5\linewidth}
+        \centering
+        \includegraphics[width=\linewidth]{fig/part4/prediction_count_proposed.pdf}
+    \end{subfigure}
+    \vspace{-3zh}
+    \caption[パイプラインにおける既存手法との比較]{パイプラインにおける既存手法との比較：}
+    \label{fig:pipeline_assessment}
+\end{figure}
+
+図\ref{fig:pipeline_assessment}左上では，すべての時刻において四つすべての提案手法が既存手法の精度を上回っていることが分かる．meanIoUは予測された物体で平均を取っているため，一物体あたりの精度でも大きく打ち勝っているといえる．また予測されている物体数に着目すると（図左下），提案手法に対して既存手法の予測物体数が一桁大きいことが分かる．これはスライスごとに予測を行っているためだと考えられる．これは実際に予測を参考にする場合は，どれを選択すればよいか判断しづらい，という問題に発展する．一方で提案手法では予測物体数を抑えられており，精度と物体数両方に利点があるといえる．
+
+また図右上では，提案手法三つに対してある追跡物体一つのIoUをプロットしている．この図から分かる通り，一物体に対する提案手法それぞれの状態推定精度には違いがない．一方で図右下に着目すると，予測している物体数には差が出ている．また後ほど詳しく議論するが，右上の図のように状態推定精度はある時刻までは一定でそのあと落ち始める．以上の結果から，左上の図で提案手法ごとに精度に差が出る要因の一つとして，予測物体数が小さくなることである物体の精度低下の効果が顕著に出ていることが挙げられる．例えば時刻$60$から時刻$80$あたりでは，SORT + DepthSORTの予測物体数が最も少ない．これにより右上の図のような精度低下分が全体の精度に対して大きくなり，左上のように他の提案手法よりも精度が悪くなったと考えられる．
+
+\section{提案手法の段階的評価}
+\label{sec:stage_evaluation}
+
+本章では提案部分であるReID手法と状態推定手法を段階的に分けて精度評価を行う．ReID評価では，一般的なMOTの評価指標と各物体が検出された時刻およびスライスを可視化する方法を用いて，提案手法がスライスを跨いだReIDを達成しているかを確認する．また後続の状態推定評価では，カルマンフィルタにおける事後分布の期待値および分散を確認することで，SliceKalmanFilterが高精度に三次元的な状態を推定できていることを確認する．
+
+    \subsection{ReID手法の評価}
+    \label{subsec:reidentification_evaluation}
+
+    提案するReID手法の目的は，三次元的な観測変数を構築するために，スライスを跨いだIDの対応付けを行うことであった．よってこの節では，MOTによく使われる評価指標のみでなく，Detection-Mapという可視化を用いて所望の結果が得られていることを確認する．
+
+        \subsubsection{MOTの評価指標}
+
+        MOTにおける潜在的なエラーは，検出の可否，IDの振り違い，そして検出位置のズレの三つから構成される．本節では理想的な物体検出を想定しているため，この中で本節に用いることが有効であるのはIDの振り違いを評価するものである．よって本節では，ID-switch（以後IDSWと呼ぶ）とAssociation-Accuracy（以後AssAと呼ぶ）という評価指標を用いる．
+
+        MOTの評価指標の説明を行うために，いくつか用語の導入を行う（ただしこれらの用語はMOTの評価指標の一つであるHOTAに関する論文\cite{luiten2021hota}に揃えている）．まず検出されたバウンディングボックスをprDets，バウンディングボックスの正解ラベルをgtDetsという集合として表す．またこれらには，どの個体由来であるかを示すprIDsとgtIDsの集合に含まれるIDが割り振られている．すなわちある検出バウンディングボックスprDetには，prID(prDet)が割り振られている．また評価指標を算出する際には，どのprIDがどのgtIDに対応するのか（IDの対応付け）やどのprDetがgtDetに対応するのか（Detの対応付け）などが必要であり，これらは基本的に最終的なスコアを最大化するように対応付けられる．
+    
+        IDSW\cite{luiten2021hota}は，あるgtIDを持つgtDetsに着目したとき，そのgtDetsに対応付けられたprDetsの中にいくつのprIDが混在しているか（実際にはswitch回数を計算するので個数$-1$）を数え上げたものである．もし理想的なReIDが行われた場合，この値は$0$になる．
+    
+        またAssA\cite{luiten2021hota}は，前述の三つのエラーをすべて考慮したHOTAを構成する評価指標のうち，当初の目的であるIDの振り違いを評価できる評価指標である．このAssAは，ある対応付けが行われたprDetとgtDetがあるときに，それぞれが持つIDが振られているprDetsとgtDetsに着目し，どれだけその集合が一致しているかを一般的なPrecisionやRecallの考えに則って算出したものを平均したものである．もし理想的なReIDが行われた場合，この値は$1.0$になる．
+
+        \subsubsection{Detection-Mapによる可視化}
+
+        また本節では詳細な議論を行うために，Detection-Mapという図示によってReIDの結果の可視化を行う．このDetection-Mapでは，追跡を行った各IDの物体に対して，そのIDを振られたバウンディングボックスがどの（時刻$t$とスライス$s$で特徴づけられる）画像で検出されたものであるのかを示す．すなわち，各物体がどの画像で検出されたのか，どれだけその物体を追跡できているのかを示すことができる．
 
         \subsubsection{結果}
 
+        \begin{table}[t]
+            \centering
+            \caption[ReIDにおける提案手法の比較]{ReIDにおける提案手法の比較：}
+            \label{tab:metrics_reidentification}
+            \begin{tabular}{l|ccc}
+                Methods & Number of Predictions & IDSW & AssA (\%)
+                \\\hline \hline
+                SORT + DepthSORT & $38.6 ~ (\pm 5.5)$ & $51.8 ~ (\pm 19.9)$ & $92.3 ~ (\pm 3.7)$
+                \\ SKF + DepthSORT & $42.8 ~ (\pm 4.6)$ & $61.8 ~ (\pm 17.3)$ & $91.5 ~ (\pm 3.0)$
+                \\ only SKF & $44.2 ~ (\pm 4.9)$ & $92.8 ~ (\pm 21.0)$ & $93.6 ~ (\pm 1.8)$
+            \end{tabular}
+        \end{table}
+
         \begin{figure}[t]
-            \begin{subfigure}[b]{0.5\linewidth}
-                \centering
-                \includegraphics[width=\linewidth]{fig/meanIoUs.pdf}
-                % \caption[パイプライン評価におけるmeanIoU比較]{パイプライン評価におけるmeanIoU比較：提案手法の詳細については表\ref{tab:reidentification_methods}を参照されたい．}
-                \label{fig:meanIoU_pipeline}
-            \end{subfigure}
-            \hfill
-            \begin{subfigure}[b]{0.5\linewidth}
-                \centering
-                \includegraphics[width=\linewidth]{fig/prediction_count.pdf} 
-                \label{fig:prediction_count}
-            \end{subfigure}
-            \vspace{-3zh}
-            \caption[パイプラインにおける既存手法との比較評価]{パイプラインにおける既存手法との比較評価：実線が提案手法，点線が既存手法による結果を示す．（左）meanIoUは予測球体と正解ラベル球体の重なり具合を示し，最大が$1.0$である．（右）縦軸が予測された追跡対象の個数を表す．既存手法ではスライスで分割された分かなり冗長な予測がされている．}
-            \label{fig:pipeline_assessment}
+            \centering
+            \includegraphics[width=\linewidth]{fig/detection_maps.pdf}
+            \caption[提案するReID手法によるDetection-Mapの一部]{提案するReID手法によるDetection-Mapの一部}
+            \label{fig:detection_map}
         \end{figure}
-        
-        図\ref{fig:pipeline_assessment}に結果を示すように，すべての時刻において四つすべての提案手法が既存手法の精度を上回っている．この結果では予測された球体のうち，IoU$ > 0$のもののみを換算しているため，予測の精度が良いものに限定しても提案手法の予測精度が大きく既存手法を上回っていると言える．また図\ref{fig:pipeline_assessment}（右）では，既存手法の予測数が提案手法に比較してかなり冗長であることを示している．これはスライスごとに予測を行っているためと考えられる．これは実際に追跡による予測を参考にする際に，どれを選択すればよいか判断しづらいという問題に発展してしまう．一方で提案手法では$n_b$である$10$付近に予測数を抑えられていることが分かる．
 
-    \subsection{状態推定手法単体の評価}
-    \label{subsec:evaluate_estimation}
+        表\ref{tab:metrics_reidentification}に，三つの提案手法におけるMOTの評価指標，および前節の結果に関連する予測物体数を示す．またReIDにDepthSORTを用いる場合，ほとんどのDetection-Mapは変わらないため，図\ref{fig:detection_map}にはDepthSORTを用いた場合とそうでない場合のDetection-Mapの一部を載せている．
 
-    図\ref{fig:pipeline_assessment}では，四つの提案手法にも精度の違いが確認された．そこでここからの節では，ReIDと状態推定を分けて四つの提案手法の違いを検証する．また本節では，パイプラインの順番と前後するが，議論の容易さのために下流側の状態推定から評価を行う．
+        まず表のAssAに着目すると，どの手法でも$9$割以上の精度を達しており，シードによる分散を考慮するとこれらに大きな違いは見られなかった．また図のDetection-Mapを確認すると，いずれの手法でも大域的に安定したスライドを跨ぐReIDを達成できていることが分かる．ただし，DepthSORTを用いた場合の方がより安定しており，用いない場合は図の下側に示すように少なからず欠損が確認された．
 
-    本節ではSliceKalmanFilterの精度を確かめるために，検証用データの作成手順4（\ref{sec:demodata}参照）において作成した，ID付きのバウンディングボックスを入力としてそれぞれのIDにおける状態推定を行う．すなわち理想的なReIDが行われた場合のmeanIoUを確認する．またSliceKalmanFilterの詳細な評価を行うため，カルマンフィルタにおける事後分布$p(\bm{s}_t \mid \bm{o}_1, \dots, \bm{o}_t)$の期待値と共分散の対角行列成分を正解ラベルの値と比較する．
+        一方IDSWや予測物体数を比較すると，SORT+DepthSORTが最も安定し，SliceKalmanFilterのみを用いる場合は少し不安定になっていることが分かる．図の下側と合わせて考えると，DepthSORTを用いないことである同一個体由来のバウンディングボックスが分裂してしまい，別個体として追跡され，表に現れているようにIDSWや予測物体数の増加に起因したと考えられる．
+
+
+    \subsection{状態推定手法の評価}
+    \label{subsec:estimation_evaluation}
+
+    
+
+    %%%%%%%%%%%%%%%%%%%%%
+    % Naive 比較は後回し!!!! (ここでperformanceも出す) % 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        \subsubsection{使用する検証用データ}
+
+        ReID手法によって生じる精度差をより詳細に議論するために，物体数$n_b = 1$とした検証用データを使用して評価を行う．また通常の検証用データでは，すべての時刻における物体数を保つために手順5において物体の生成を行っていたが，ここでは生成を行わず，ただ一つの物体に着目した評価を行う．よって検出されるバウンディングボックスはすべて同個体由来のものとして扱い，SliceKalmanFilterに入力する．
 
         \subsubsection{結果}
 
         \begin{figure}[t]
-            \begin{subfigure}[b]{\linewidth}
+            \begin{subfigure}[t]{\linewidth}
                 \centering
-                \includegraphics[width=0.55\linewidth]{fig/meanIoUs_withGT.pdf}
-                \caption[理想的なReIDを用いた場合のmeanIoU]{理想的なReIDを用いた場合のmeanIoU：紫色の実線が，正解ラベルを用いた状態推定の精度を表す．}
-                \label{fig:meanIoU_withGT}
+                \includegraphics[width=\linewidth]{fig/part4/performance_000.pdf}
             \end{subfigure}
             \\
-            \begin{subfigure}[b]{\linewidth}
+            \begin{subfigure}[t]{\linewidth}
                 \centering
-                \includegraphics[width=\linewidth]{fig/GTperformances/003.pdf}
-                \caption[SKFの事後分布と正解ラベルの比較]{SKFの事後分布と正解ラベルの比較：左上から順に，$x$，$y$，$z$，$r$，$\dot{x}$，$\dot{y}$，$\dot{z}$の正解ラベル（黒実線），事後分布期待値（青実線），事後分布の$95\%$信頼区間を表す．}
-                \label{fig:SKF_performance}
+                \includegraphics[width=0.5\linewidth]{fig/part4/IoU_seed1234_GT.pdf}
             \end{subfigure}
-            \caption[理想的なReIDを用いたSKFの状態推定精度評価]{理想的なReIDを用いたSKFの状態推定精度評価}
+            \caption[SliceKalmanFilterの精度評価]{SliceKalmanFilterの精度評価：}
+            \label{fig:SKF_evaluation}
         \end{figure}
 
-        まず理想的なReIDを行った場合のmeanIoUの結果を図\ref{fig:meanIoU_withGT}に示す．図に示す通り，提案手法の四つによってReIDされた観測系列からでも，理想的なReIDに近い精度を推定できていることが分かる．また図の一部でSliceKalmanFilterを時間方向の対応付けに用いた場合に理想的なReIDを用いている場合よりも精度が高い理由については後に議論する．
+        図\ref{fig:SKF_evaluation}に事後分布における各状態変数の$95\%$信頼区間および正解ラベルの値を示す．また議論のために状態推定の精度を示すmeanIoU（ただし$n_b = 1$なので単一のIoUでもある）も同時に示す．各状態変数の予測分布に着目すると，ほとんど正解ラベルと差がなく，高精度に推定できていることが分かる．ただし$y$のグラフの時刻$60$付近に着目すると，その正解ラベルおよび推定値が対象領域の端である$\ell = 100$付近に近づいており，その時刻以降精度が落ちていることが分かる．また同時に他の状態変数の精度も低下している．
 
-        また図\ref{fig:SKF_performance}は，理想的なIDを用いた際の，ある一つのIDに対して正解ラベル，事後分布の平均値，そしてその分散共分散行列の対角成分を示している．図において$y$のグラフに着目すると，物体が対象領域の端（$\ell = 100$）付近に近づくにつれて精度が落ちていることが分かる．またそのタイミングと同時に，ほかの状態変数の精度も落ちている．これは物体が対象領域の端に近づくにつれて検出されるバウンディングボックスが欠け，推定がうまくされていないことが容易に想像できる．このような傾向が他の物体に対しても見られ，反対にすべての時刻で大きく推定がずれているものも確認されなかった．すなわち図\ref{fig:meanIoU_withGT}において$\text{meanIoU} = 1.0$より劣る原因は，SliceKalmanFilterが，画像から物体が見切れる状況を扱いきれていないためだと考えられる．
-
-    \subsection{ReID手法単体の評価}
-    \label{subsec:evaluate_reidentification}
-
-    図\ref{fig:meanIoU_withGT}に示したように，時間方向の対応付けにSliceKalmanFilterを用いた場合は理想的なReIDと同様かそれ以上の精度を示し，反対に各スライスのSORTを用いた場合には精度が下がることが確認された．そこで本節では．MOTにしばしば用いられる評価指標と新たに導入するDetection-Mapという図示方法を利用して，これらの違いの議論を行う．
-
-    \subsubsection{MOTの評価指標}
-
-    MOTにおける潜在的なエラーは，検出の可否，IDの振り違い，そして検出位置のズレの三つから構成される．本節では理想的な物体検出を想定しているため，この中で本節に用いることが有効であるのはIDの振り違いを評価するものである．よって本節では，ID-switch（以後IDSWと呼ぶ）とAssociation-Accuracy（以後AssAと呼ぶ）という評価指標を用いる．
-
-    MOTの評価指標の説明を行うために，いくつか用語の導入を行う（ただしこれらの用語はMOTの評価指標の一つであるHOTAに関する論文\cite{luiten2021hota}に揃えている）．まず検出されたバウンディングボックスをprDets，バウンディングボックスの正解ラベルをgtDetsという集合として表す．またこれらには，どの個体由来であるかを示すprIDsとgtIDsの集合に含まれるIDが割り振られている．すなわちある検出バウンディングボックスprDetには，prID(prDet)が割り振られている．また評価指標を算出する際には，どのprIDがどのgtIDに対応するのか（IDの対応付け）やどのprDetがgtDetに対応するのか（Detの対応付け）などが必要であり，これらは基本的に最終的なスコアを最大化するように対応付けられる．
-
-    IDSW\cite{luiten2021hota}は，あるgtIDを持つgtDetsに着目したとき，そのgtDetsに対応付けられたprDetsの中にいくつのprIDが混在しているか（実際にはswitch回数を計算するので個数$-1$）を数え上げたものである．もし理想的なReIDが行われた場合，この値は$0$になる．
-
-    またAssA\cite{luiten2021hota}は，前述の三つのエラーをすべて考慮したHOTAを構成する評価指標のうち，当初の目的であるIDの振り違いを評価できる評価指標である．このAssAは，ある対応付けが行われたprDetとgtDetがあるときに，それぞれが持つIDが振られているprDetsとgtDetsに着目し，どれだけその集合が一致しているかを一般的なPrecisionやRecallの考えに則って算出したものを平均したものである．もし理想的なReIDが行われた場合，この値は$1.0$になる．
-
-    \subsubsection{Detection-Mapによる可視化}
-
-    また本節では詳細な議論を行うために，Detection-Mapという図示によってReIDの結果の可視化を行う．このDetection-Mapでは，追跡を行った各IDの物体に対して，そのIDを振られたバウンディングボックスがどの（時刻$t$とスライス$s$で特徴づけられる）画像で検出されたものであるのかを示す．すなわち，各物体がどの画像で検出されたのか，どれだけその物体を追跡できているのかを示すことができる．
-    
-    \subsubsection{結果}
-
-    \begin{table}[t]
-        \centering
-        \caption[ReIDにおける提案手法の比較]{ReIDにおける提案手法の比較：太字は最良値を示している．\# Predictionsは，予測されたprIDsの個数を表している．}
-        \label{tab:metrics_reidentification}
-        \begin{tabular}{l|ccc}
-            Methods & \# Predictions & IDSW & AssA 
-            \\\hline \hline
-            only SORT & $49$ & $324$ & $32.2\%$
-            \\ only SKF & $35$ & $\bm{18}$ & $93.8\%$
-            \\ SORT + DepthSORT & $\bm{33}$ & $23$ & $\bm{95.4\%}$
-            \\ SKF + DepthSORT & $52$ & $25$ & $94.3\%$
-        \end{tabular}
-    \end{table}
-
-    \begin{figure}[t]
-        \centering
-        \includegraphics[width=\linewidth]{fig/detection_maps.pdf}
-        \caption[各ReID手法によるDetection-Mapの一部]{各ReID手法によるDetection-Mapの一部：(a)理想的なReIDに近いDetection-Map（これはSORT+DepthSORTによる結果の一部である）．(b)SORT+DepthSORTにおいて，IDSWが生じているDetection-Map．(c)SKFのみによるReIDにおけるDetection-Mapの一部，図のように少し欠けている部分が見られる．(d)SORTのみによるReIDにおけるDetection-Mapの一部．スライス方向への対応付けができていないことが分かる．}
-        \label{fig:detection_maps}
-    \end{figure}
-
-    表\ref{tab:metrics_reidentification}および図\ref{fig:detection_maps}に結果を示す．まず時間方向の対応付けのみを行い，かつその対応付けをSORTのみで行った場合（only SORT），図(d)に示すように他のスライスにおけるバウンディングボックスに対応付けることができず，表に示すようにMOT自体の精度が下がってしまっている．
-
-    一方評価指標で大きな差が見られなかった他の三つでは，図(a)と図(c)を比較することで，DepthSORTを用いない場合はある程度の対応付けの見逃しが発生していることが分かる．しかしながら一方でSORTで対応付けしたあとにDepthSORTを利用すると，表\ref{tab:metrics_reidentification}のIDSWと図(b)に示すように他の個体由来のバウンディングボックスに同じIDを振ってしまっていることが確認される．おそらくこれは，各スライスにおけるバウンディングボックス予測が他の個体由来の検出バウンディングボックスと位置が近く，間違えて対応付けられてしまったためだと考えられる．
-
-    すなわち対応付けにDepthSORTを実施しない場合は，見逃しが発生するが状態推定に大きな影響を及ぼさない．反対にDetphSORTを実施していても，SORTなどにより他の個体由来のバウンディングボックスが対応付けられてしまうと，状態推定に大きな影響を及ぼし，図\ref{fig:pipeline_assessment}に示すような精度低下につながったと結論付けられる．
+        これは物体が対象領域の端に近づくにつれて検出されるバウンディングボックスが欠けていることが原因として考えられる．このような対象領域の端における精度低下は他の物体でも見られ，反対に端以外における精度低下は見られなかった．すなわちSliceKalmanFilterが画像から見切れる状況を扱いきれておらず，状態推定精度の図のような挙動に起因したと考えられる．
 
 \section{スライス数の変化に対する評価}
-\label{sec:number_of_slice}
+\label{sec:number_of_slice_effect}
 
 \ref{sec:setting}では，対象空間を何枚のスライスで捉えるのかを$n_s$で表し，この$n_s$の値によってフレーム間隔とスライス間隔のトレードオフが生じることを説明した．よって本節では，このスライス枚数$n_s$を変化させたときに追跡精度meanIoUにどのような影響を及ぼすのかを検証する．評価方法は，前節で用いたものを引き続き利用する．また提案手法のうちonly SORTは高精度が望まれないことが自明であるため，本節では実験の対象から除外する．
 
@@ -195,47 +207,36 @@
     \subsubsection{結果}
 
     \begin{figure}[t]
-        \begin{subfigure}[b]{\linewidth}
+        \begin{subfigure}[t]{\linewidth}
             \centering
-            \includegraphics[width=\linewidth]{fig/meaniou_each_ns.pdf}
-            \caption[各$n_s$ごとの追跡精度評価]{各$n_s$ごとの追跡精度評価：各色のプロットが三つの提案手法に対応している．また横軸のStepは離散的な時刻を表すため，$n_s$ごとに上端が異なっている．}
-            \label{fig:meaniou_each_ns}
+            \includegraphics[width=\linewidth]{fig/part4/meanIoUs_with_ns.pdf}
         \end{subfigure}
         \\
-        \begin{subfigure}[b]{0.32\linewidth}
+        \begin{subfigure}[t]{.5\linewidth}
             \centering
-            \includegraphics[width=\linewidth]{fig/ns_exp/meanIoUs_GTs.pdf}
-            \caption[理想的なReIDを用いた場合の$n_s$の影響]{理想的なReIDを用いた場合の$n_s$の影響}
-            \label{fig:ideal_reid_ns_effect}
+            \includegraphics[width=\linewidth]{fig/part4/AssA_with_ns.pdf}
         \end{subfigure}
-        \hfill
-        \begin{subfigure}[b]{0.32\linewidth}
+        \begin{subfigure}[t]{.5\linewidth}
             \centering
-            \includegraphics[width=\linewidth]{fig/ns_exp/Assa_ns.pdf}
-            \caption[各提案手法におけるAssAに対する$n_s$の影響]{各提案手法におけるAssAに対する$n_s$の影響}
-            \label{fig:ns_effect_on_assa}
+            \includegraphics[width=\linewidth]{fig/part4/IDSW_with_ns.pdf}
         \end{subfigure}
-        \hfill
-        \begin{subfigure}[b]{0.32\linewidth}
-            \centering
-            \includegraphics[width=\linewidth]{fig/ns_exp/IDSW_ns.pdf}
-            \caption[各提案手法におけるIDSWに対する$n_s$の影響]{各提案手法におけるIDSWに対する$n_s$の影響}
-            \label{fig:ns_effect_on_idsw}
-        \end{subfigure}
-        \caption[スライス数$n_s$を変えた場合の状態推定精度の影響]{スライス数$n_s$を変えた場合の状態推定精度の影響}
+        \caption[スライス数変化の影響]{スライス数変化の影響：}
         \label{fig:ns_effect}
     \end{figure}
 
-    図\ref{fig:ns_effect}に結果を示す．まず図\ref{fig:meaniou_each_ns}に着目すると，スライス数$n_s$を上げ続けると状態推定精度が落ちる傾向にある．これは図\ref{fig:ns_effect_on_assa}および\ref{fig:ns_effect_on_idsw}に示すようにIDSWが増えずにAssAのみ下がっているため，ある単一の個体に由来するバウンディングボックスが，いくつかの別個体として認識されていることが分かる．これはおそらく，$n_s$が大きくなったことでフレーム間隔$dt$が大きくなり，時間方向の対応付けが困難になってしまったためと考えられる．
+    図\ref{fig:ns_effect}の上側に，各提案手法に対するスライス数の影響，下側にReIDを評価するためのAssAとIDSWに対する影響を示す．すべての提案手法に共通して，$n_s = 11$を除くとスライス数の上昇に応じて状態推定精度が落ちる傾向が見られた．ReIDに対する影響に着目すると，スライス数の上昇に応じてReIDの精度が上がっているため，フレーム間隔$dt$がSliceKalmanFilterによる状態推定の精度を下げてしまっていることが分かる．
 
-    また$n_s = 11$では反対に，すべての提案手法における精度の低下が確認された．図\ref{fig:ns_effect_on_assa}および図\ref{fig:ns_effect_on_idsw}からReIDの精度が急激に低下していることが分かり，これが状態推定精度に起因していると考えられる．またスライス間隔$\delta z$および球体のサイズ$r_{\text{max}}$，$r_{\text{min}}$を比較しても，$r_{\text{max}} = \delta z$であるので，明らかに検出されるバウンディングボックスが少ないことが自明であり，これがReIDの低精度の原因と考えられる．
+    これは逆に考えると，必ずしもすべてのバウンディングボックスを対応付ける必要がなく，フレーム間隔を下げることが状態推定にとって重要であると考えることができる．すなわちSliceKalmanFilterを状態推定に用いる場合は，スライス数をなるべく小さくしてフレーム間隔を縮めたほうがよい，という指針を得ることができる．
 
-    特筆するべき点は，$n_s = 21 \sim 201$においてReIDの精度が大きく向上していないにもかかわらず，図\ref{fig:ideal_reid_ns_effect}に示すように$n_s$を下げるにつれ状態推定の精度が上がっていることである．これはすなわち，SliceKalmanFilterを推定に利用すれば，スライス間隔が少なくとも対象物体の最小サイズより小さい場合，それ以上は時間間隔を狭めればよい，と結論づけられることを示している．
+    ただし，$n_s = 11$の結果には注意が必要である．状態推定およびReIDどちらの結果でも，$n_s = 11$までスライス数を小さくすると著しく精度が低下している．これは，スライス間隔が物体の大きさのオーダーに近く，個体ごとに検出されるバウンディングボックスが極端に少なくなったことが原因として考えられる．実際に，$n_s = 11$の場合のスライス間隔は$\delta z = 10.0$であり（表\ref{tab:ns_exp_detail}参照），物体の直径は$10 \sim 20$（\ref{sec:demodata}節参照）である．以上の議論より，スライス数は少なくとも，物体の大きさがスライス間隔の$2$倍程度になるように設定することが望まれる．
 
-\section{細胞に対する物体検出の評価}
-\label{sec:cell_detection}
+\section{物体検出を含んだパイプライン評価}
+\label{sec:pipleline_evaluation_with_detection}
 
-ここまでの章では，理想的な物体検出を行ったとして検証データを用いてReIDおよび状態推定を評価してきた．しかしながら実際の物体検出では誤検出や見逃しがあり，それらは後続のReID，状態推定に影響を及ぼすはずである．よってまずはこの章では，実際の共焦点顕微鏡から得られた細胞に対するデータを用い，物体検出の評価を行う．
+ここまでの節では，理想的な物体検出を行ったとして検証用データを用いてReIDおよび状態推定を評価してきた．しかしながら実際の物体検出では誤検出や見逃しがあり，これらは後続のReIDや状態推定に影響を及ぼすはずである．よってこの節ではまずはじめに，実際に共焦点顕微鏡から得られるプロトプラスト化した細胞に対する物体検出を評価する（\ref{subsec:detection_of_protoplast}項）．そしてそのあと，誤検出や見逃しが追跡に与える影響およびそれらへの対処を述べる（\ref{subsec:FPeffect}項および\ref{subsec:FNeffect}項）．
+
+    \subsection{プロトプラスト化した細胞に対する物体検出評価}
+    \label{subsec:detection_of_protoplast}
 
     \subsubsection{実装詳細}
 
@@ -274,75 +275,89 @@
 
     これらの図より，f1scoreの最大値は$0.8$付近であり，信頼度の閾値は$0.2$付近が良いと判断される．すなわち，少なくともFPおよびFNは二割以上発生すると想定して複数物体追跡を行うことが望まれる．
 
-\section{物体検出のFPとFNが与える効果および対処}
-\label{sec:covering_detection}
+    \subsection{物体検出の誤検出が及ぼす影響}
+    \label{subsec:FPeffect}
 
-    前章では，実際の物体を対象とした複数物体追跡では，物体検出において十分に誤検出や見逃しが生じうることを確認した．そこで本章では，その誤検出や見逃しが後続の複数物体追跡にどのような影響を与え，またどのように対処するべきかを評価・検証する．
-
-    \subsection{物体検出のFNの影響と対処}
-    \label{subsec:false_negative_effect}
-
-    まずは問題を切り分け，見逃し（FN）が複数物体追跡に及ぼす影響を評価する．本節では，検証用データの作成手順4において，見逃す確率をドロップアウト率$r_{d} \in [0, 1]$と定め，その確率でバウンディングボックスの正解ラベルを削除する．そしてこの削除されたバウンディングボックスを物体検出後の入力としてReIDおよび状態推定を評価する．
-
-    \subsection{結果}
-
-    \begin{figure}[t]
-        \centering
-        \begin{subfigure}[b]{\linewidth}
-            \centering
-            \includegraphics[width=\linewidth]{fig/FN_effect.pdf}
-            \caption[物体検出のFNによる状態推定と追跡物体数の変化]{物体検出のFNによる状態推定と追跡物体数の変化}
-            \label{fig:FN_effect}
-        \end{subfigure}
-        \\
-        \begin{subfigure}[t]{0.6\linewidth}
-            \centering
-            \includegraphics[width=\linewidth]{fig/depth_thres_covering.pdf}
-            \caption[深さ方向の打ち切り閾値による状態推定の改善]{深さ方向の打ち切り閾値による状態推定の改善}
-            \label{fig:depth_thres_covering}
-        \end{subfigure}
-        \hfill
-        \begin{subfigure}[t]{0.3\linewidth}
-            \centering
-            \includegraphics[width=\linewidth]{fig/AssA_dropout0.5_with_thres.pdf}
-            \caption[深さ方向の打ち切り閾値とReID精度の関係]{深さ方向の打ち切り閾値とReID精度の関係}
-            \label{fig:AssA_with_thres}
-        \end{subfigure}
-        \caption[物体検出のFNがMOTに与える効果]{物体検出のFNがMOTに与える効果：}
-        \label{fig:MOT_detectionFN}
-    \end{figure}
-
-    まず物体検出のFNが状態推定精度に与える影響を図\ref{fig:FN_effect}に示す．まずReIDにSliceKalmanFilterのみを用いた場合は，精度および予測される物体数も安定し，影響を受けないことが分かる．一方でDepthSORTを用いる他の二つの手法は検出抜けの割合$r_d$に応じて精度が悪化している．これはDepthSORTを行う際に，追跡をやめる打ち切り閾値を$1$に設定したことが起因し，追跡が途切れたことが原因と考える．実際に予測されている物体数を数えると，$r_d$が増える程その予測数も多くなり，DepthSORTの軌跡の分裂がひとつの大きな要因として考えられる．
-
-    よってその打ち切り閾値を変化させた場合の結果が図\ref{fig:depth_thres_covering}である．各色のプロットがその打ち切り閾値に対応しており，閾値を大きくすることである程度の改善が見られていることが分かる．ただし図\ref{fig:AssA_with_thres}に着目すると，この改善もある閾値で頭打ちになる．これはおそらく，閾値を大きくしたことによって今度は他の個体由来のバウンディングボックスが対応付けられるようになってしまったことが要因として考えられる．
-
-    \subsection{物体検出のFPが与える効果}
-    \label{subsec:false_positive_effect}
-
-    次に誤検出（FP）が複数物体追跡に及ぼす影響を評価する．本節では，検出されたバウンディングボックスのうちFPが含まれる確率を制御する．よってこの割合を$r_{\text{FP}} \in [0, 1]$とし，各フレームごとの検出数$\times r_{\text{FP}}$個の偽バウンディングボックスを生成する．このときバウンディングボックスの位置$(x,y)$は$[0, \ell]$から一様サンプリングし，サイズ$(w,h)$は$[r_{\text{min}}, r_{\text{max}}]$から一様サンプリングしたのち二倍した値を共通して与えている．またこのバウンディングボックスが領域$[0, 1]^2$を超える場合は，$[0, 1]$にクランプする．
+    まず問題を切り分け，誤検出（FP）が追跡に及ぼす影響を評価する．本項では，検証用データ作成手順4において，検出に誤検出が含まれる割合を$r_{\text{FP}} \in [0, 1]$として定め，各画像ごとに誤検出割合が$r_{\text{FP}}$になるように偽のバウンディングボックスを生成する．このときバウンディングボックスの位置$(x,y)$は$[0, \ell]$から一様サンプリングし，サイズ$(w, h)$は$[r_{\text{min}}, r_{\text{max}}]$から一様サンプリングしたのち二倍した値を共通して与える．またこのバウンディングボックスが領域$[0, 1]^2$を超える場合は，$[0, 1]$にクランプする．
 
         \subsubsection{結果}
 
         \begin{figure}[t]
-            \centering
             \begin{subfigure}[t]{\linewidth}
                 \centering
-                \includegraphics[width=\linewidth]{fig/FPeffect_on_meanIoU.pdf}
-                \caption[物体検出のFPが状態推定に与える影響]{物体検出のFPが状態推定に与える影響}
-                \label{fig:FPeffect_on_meanIoU}
+                \includegraphics[width=\linewidth]{fig/part4/meanIoUs_with_fp.pdf}
             \end{subfigure}
-            \begin{subfigure}[t]{0.66\linewidth}
+            \\
+            \begin{subfigure}[t]{\linewidth}
                 \centering
-                \includegraphics[width=\linewidth]{fig/FPeffect_on_ReID.pdf}
-                \caption[物体検出のFPがReIDに与える影響]{物体検出のFPがReIDに与える影響}
-                \label{fig:FPeffect_on_ReID}
+                \includegraphics[width=\linewidth]{fig/part4/count_with_fp.pdf}
             \end{subfigure}
-            \caption[物体検出のFPが与える影響]{物体検出のFPが与える影響}
-            \label{fig:FPeffect}
+            \\
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/reid_with_fp.pdf}
+            \end{subfigure}
+            \caption[物体検出のFPが追跡に及ぼす影響]{物体検出のFPが追跡に及ぼす影響：}
+            \label{fig:FP_effect}
         \end{figure}
 
-        図\ref{fig:yolo_f1score}に応じて，$r_{\text{FP}}$を$0.1$から$0.5$まで変化させたときのReIDおよび状態推定に与える影響を図\ref{fig:FPeffect}に示す．まず状態推定ついて（図\ref{fig:FPeffect_on_meanIoU}）は，FPの割合を変更させたときに推定精度の挙動は変わるものの，全体的な変化は見られなかった．これはすなわち，物体検出のFPとFNのトレードオフを考える際に，FNを優先して信頼度スコアの閾値を低くすれば良いことを示唆している．
+        誤検出率$r_{\text{FP}}$を$0.1$から$0.5$まで変化させたときの状態変数およびReIDに及ぼす影響を図\ref{fig:FP_effect}に示す．まず状態推定ついては，FPの割合を変更させたときに推定精度の挙動は変わるものの，全体的な変化は見られなかった．これはすなわち，物体検出のFPとFNのトレードオフを考える際に，FNを優先して信頼度スコアの閾値を低くすれば良いことを示唆している．
 
-        一方ReIDの精度（図\ref{fig:FPeffect_on_ReID}）に着目すると，AssAはあまり変化しないもののIDSWでは変化が見られた．これはつまり，ある個体由来のバウンディングボックスが複数の物体として分裂して認識されているが，ほとんどのバウンディングボックスが一つのIDに割り当てられ，分裂したバウンディングボックスが少量であったと推測できる．すなわちReIDにおいてもFPの大きな影響がないことが分かる．
+        一方ReIDの精度に着目すると，AssAはあまり変化しないもののIDSWでは変化が見られた．これはつまり，ある個体由来のバウンディングボックスが複数の物体として分裂して認識されているが，ほとんどのバウンディングボックスが一つのIDに割り当てられ，分裂したバウンディングボックスが少量であったと推測できる．すなわちReIDにおいてもFPの大きな影響がないことが分かる．
 
         これらの結果は，ほとんどの対応付けをIoUベースで実施していることが理由として考えられる．IoUをベースにする場合，たとえFPの割合が大きいとしても，正しい対応付けに影響するのは，TPのバウンディングボックスに対してIoUが$0$より大きいFPのバウンディングボックスのみである．よってFPの割合が大きくてもあまり精度に影響が出なかったと考えれる．
+
+    \subsection{物体検出の見逃しが及ぼす影響}
+    \label{subsec:FNeffect}
+
+    次に見逃し（FN）が追跡に及ぼす影響を評価する．本項では，検証用データ作成手順4において，検出を見逃す確率を$r_{\text{fn}} \in [0, 1]$として定め，その確率で各バウンディングボックスの正解ラベルを削除する．そしてこの見逃しを含んだバウンディングボックス群を物体検出後の入力としてReIDおよび状態推定を評価する．
+
+        \subsubsection{結果1 物体検出FNが追跡に及ぼす影響}
+
+        \begin{figure}[t]
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/meanIoUs_with_fn.pdf}
+            \end{subfigure}
+            \\
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/count_with_fn.pdf}
+            \end{subfigure}
+            \caption[物体検出のFNが追跡に及ぼす影響]{物体検出のFNが追跡に及ぼす影響：}
+            \label{fig:FN_effect}
+        \end{figure}
+
+        図\ref{fig:FN_effect}に物体検出のFNが状態推定（上）および予測物体数（下）に及ぼす影響を示す．まずReIDにDetphSORTを使用しない場合（only SKF）では，FNの割合にあまり影響を受けず，状態推定の精度および予測数は安定している．一方DephtSORTを用いる二手法は，予測物体数においてどちらとも影響を受けており，特にSKF+DepthSORTでは顕著な影響が見られる．これはDepthSORTを行う際に，追跡を止める打ち切り閾値$\sigma_{\text{act}}$を$1$に設定したことが起因し，追跡が途切れたことが理由として考えられる．
+
+        一方状態推定の精度に影響を及ぼしていないのは，SliceKalmanFilterが欠けた観測変数からでもある程度の精度をもって推定できているためだと推測できる．この挙動は，\ref{subsec:number_of_slice_effect}節において，スライス数が少なくても状態推定の精度を保っていた挙動に似ている．もしSliceKalmanFilterがそのような，欠けた観測変数からも精度を保った推定が可能であるならば，SORT+DepthSORTの状態推定が不安定であるのは，別個体由来のバウンディングボックスが対応付けられたためと類推できる．すなわち，二次元情報をベースにした予測によって別個体由来のバウンディングボックスが対応付けられてしまい，SliceKalmanFilterの精度を不安定にさせていると考えられる．
+
+        \subsubsection{結果2 スライス方向の打ち切り閾値変更による対処}
+
+        \begin{figure}[t]
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/meanIoUs_with_thres.pdf}
+            \end{subfigure}
+            \\
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/count_with_thres.pdf}
+            \end{subfigure}
+            \\
+            \begin{subfigure}[t]{\linewidth}
+                \centering
+                \includegraphics[width=\linewidth]{fig/part4/reid_with_thres.pdf}
+            \end{subfigure}
+            \caption[DepthSORTにおける打ち切り閾値による対処]{DepthSORTにおける打ち切り閾値による対処：}
+            \label{fig:handling_with_thres}
+        \end{figure}
+
+        結果1では，DepthSORTにおける打ち切り閾値が$\sigma_{\text{act}} = 1$であるために，DepthSORTを用いた追跡に影響を及ぼしていると述べた．そこで結果2では，FNの割合を$r_{\text{fn}} = 0.5$に固定し，この閾値を変化させた場合の精度を評価する．この結果を図\ref{fig:handling_with_thres}に示す．
+
+        図中段の予測物体数のグラフに着目すると，打ち切り閾値を大きくすることでかなり物体数を抑えられていることが分かる．また閾値を大きくした場合には，状態推定の精度が少なからず安定している．よって，検出の見逃し（FN）が生じる場合は，ある程度DepthSORTの打ち切り閾値を大きくするとよい．
+
+        ただし，打ち切り閾値を大きくしすぎると反対に精度の低下を招くことに注意されたい．図の下側では，打ち切り閾値を大きくしすぎた場合のReIDの精度を載せている．図に示すとおり，AssA，IDSWともに$\sigma_{\text{act}} = 5$付近以降，精度が低下している．これは打ち切り閾値が大きくなることで，別個体由来の対応付けが起きてしまったことが原因として考えられる．
+
+        以上の議論より，物体検出の見逃し（FN）が生じる場合，DepthSORTを使用するのであればその打ち切り閾値の調整が必要である．一方で，DepthSORTを使用しないonly SKFで追跡を行うのであれば，ほとんどFNの影響を受けず，考慮する必要がないことが示された．
+
