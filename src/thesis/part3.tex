@@ -298,16 +298,16 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \begin{algorithmic}[1]
                 \Require $O = \left\{\bm{o}_t \mid t \in \mathcal{T} \subset \mathbb{N}_+\right\}, T$
                 \Ensure $\hat{\bm{s}}_T$
-                \State $\textbf{Initialize: } F, Q, H, R, \Sigma_{0 \mid 0}, \bm{\mu}_{0 \mid 0} = initial\_estimate()$
-                \For {$t = 1 \text{ to } T$}
-                    \State $\bm{\mu}_{t \mid t-1} = F \bm{\mu}_{t-1 \mid t-1}$
-                    \State $\Sigma_{t \mid t-1} = F \Sigma_{t-1 \mid t-1} F^{\top} + Q$
-                    \State $\hat{\bm{s}}_t = \bm{\mu}_{t \mid t-1}$
+                \State $\textbf{Initialize: } F, Q, H, R, \Sigma, \bm{\mu} = initial\_estimate(\bm{o}_{\min(\mathcal{T})})$
+                \For {$t = \min(\mathcal{T}) + 1 \text{ to } T$}
+                    \State $\bm{\mu} \gets F \bm{\mu}$
+                    \State $\Sigma \gets F \Sigma F^{\top} + Q$
+                    \State $\hat{\bm{s}}_t = \bm{\mu}$
                     \If {$ \bm{o}_t \in O $}
-                        \State $K_t = \Sigma_{t \mid t-1} H^{\top} \left( H \Sigma_{t \mid t-1} H^{\top} + R\right)$
-                        \State $\bm{\mu}_{t \mid t} = \bm{\mu}_{t \mid t-1} + K_t \left( \bm{o}_t - H \bm{\mu}_{t \mid t-1} \right)$
-                        \State $\Sigma_{t \mid t} = \left( I - K_t H \right) \Sigma_{t \mid t-1}$
-                        \State $\hat{\bm{s}}_t = \bm{\mu}_{t \mid t}$
+                        \State $K_t = \Sigma H^{\top} \left( H \Sigma H^{\top} + R\right)$
+                        \State $\bm{\mu} \gets \bm{\mu} + K_t \left( \bm{o}_t - H \bm{\mu} \right)$
+                        \State $\Sigma \gets \left( I - K_t H \right) \Sigma$
+                        \State $\hat{\bm{s}}_t \gets \bm{\mu}$
                     \EndIf
                 \EndFor
                 \State \Return $\hat{\bm{s}}_T$
@@ -320,25 +320,18 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \begin{algorithmic}[1]
                 \Require $O = \left\{\bm{o}_t \mid t \in \mathcal{T} \subset \mathbb{N}_+\right\}, T$
                 \Ensure $\hat{\bm{o}}_T$
-                \State $\textbf{Initialize: } F, Q, H, R, \Sigma_{0 \mid 0}, \bm{\mu}_{0 \mid 0} = initial\_estimate()$
-                \For {$t = 1 \text{ to } T$}
-                    \State $\bm{\mu}_{t \mid t-1} = F \bm{\mu}_{t-1 \mid t-1}$
-                    \State $\Sigma_{t \mid t-1} = F \Sigma_{t-1 \mid t-1} F^{\top} + Q$
-                    \State $\hat{\bm{o}}_t = H \bm{\mu}_{t \mid t-1}$
-                    \If {$ \bm{o}_t \in O $}
-                        \State $K_t = \Sigma_{t \mid t-1} H^{\top} \left( H \Sigma_{t \mid t-1} H^{\top} + R\right)$
-                        \State $\bm{\mu}_{t \mid t} = \bm{\mu}_{t \mid t-1} + K_t \left( \bm{o}_t - H \bm{\mu}_{t \mid t-1} \right)$
-                        \State $\Sigma_{t \mid t} = \left( I - K_t H \right) \Sigma_{t \mid t-1}$
-                        \State $\hat{\bm{o}}_t = H \bm{\mu}_{t \mid t}$
-                    \EndIf
-                \EndFor
+                \State $\hat{\bm{s}}_T = kalman\_estimate(O, T)$
+                \State $\hat{\bm{o}}_T = H \hat{\bm{s}}_T$
                 \State \Return $\hat{\bm{o}}_T$
             \end{algorithmic}
         \end{algorithm}
 
-        式\ref{eq:estimation_equations_with_K}を用いて，時刻$T$までの観測系列$\bm{o}_1, \dots, \bm{o}_T$を入力として状態変数$\bm{s}_T$の推定を行うアルゴリズムをアルゴリズム\ref{alg:kalman_estimate}に示す．ただしここでは簡易化のため，状態遷移式および観測方程式における各変数は定常なものであるとした．またアルゴリズムに示すように，観測系列に抜け落ちがある場合でも，その時刻は式\ref{eq:posterior_with_bayes}に相当する処理を行わず，次の時刻の処理に移れば問題なく推定が可能である．
 
-        またカルマンフィルタでは，時刻$t$までの観測系列が得られたときに，時刻$t+1$の状態予測だけではなく，観測変数の予測も行うことができる．これを行うためには，式\ref{eq:estimation_equations_with_K}で計算される$\bm{s}_{t+1}$の期待値および分散と式\ref{eq:kalman_GL}の観測方程式から観測予測を行う．このアルゴリズムをアルゴリズム\ref{alg:kalman_predict}に示す．これは単に，アルゴリズム\ref{alg:kalman_estimate}の処理に観測行列$H$による変換を行っただけである（アルゴリズム10行目）．
+        式\ref{eq:estimation_equations_with_K}を用いて，時刻$T$までの観測系列$\bm{o}_1, \dots, \bm{o}_T$を入力として状態変数$\bm{s}_T$の推定を行うアルゴリズムをアルゴリズム\ref{alg:kalman_estimate}に示す．ただしここでは簡易化のため，状態遷移式および観測方程式における各変数は定常なものであるとした．また式\ref{eq:estimation_equations_with_K}で表される平均と分散は更新する形で記述した．
+        
+        初期推定値$\bm{\mu}$は，入力された観測系列に含まれる初期時刻の観測変数から$initial\_estimate$関数から得ることとする．この関数は後述の\ref{subsec:sort_algorithm}や\ref{subsec:sliced_kalman_filter}で具体的な処理を述べる．またこれらの後述のために，観測系列に抜け落ちがある場合でも適用できるように記述した（入力における$\mathcal{T}$およびアルゴリズム6行目）．
+
+        またカルマンフィルタでは，時刻$t$までの観測系列が得られたときに，時刻$t+1$の状態予測だけではなく観測変数の予測も行うことができる．これを行うためには，前述の$kalman\_estimate$関数から得られた$\hat{\bm{s}}_T$を観測方程式（式\ref{eq:kalman_GL}）の$\bm{s}_t$に代入し，期待値をとればよい．このアルゴリズムをアルゴリズム\ref{alg:kalman_predict}に示す．システムが線形の場合は状態推定値に観測行列$H$をかけるだけでこの観測予測値が得られる．
 
     \subsection{SORTのアルゴリズム}
     \label{subsec:sort_algorithm}
@@ -357,7 +350,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \For {$t = 2 \text{ to } T$}
                 \State $\hat{B}_t = \emptyset,\ \mathcal{O}_t = \emptyset$
                 \For {$O^{(i)} \text{ in } \mathcal{O}_{t-1}$}
-                    \State $\hat{\bm{b}}_t^{(i)} = kalman\_predict(O^{(i)})$
+                    \State $\hat{\bm{b}}_t^{(i)} = kalman\_predict(O^{(i)}, t)$
                     \State $\text{add } \hat{\bm{b}}_t^{(i)} \text{ to }\hat{B}_t $
                 \EndFor
                 \State $M_t = hungarian\_matching(\hat{B}_t, B_t)$
@@ -415,10 +408,10 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \begin{equation}
         \label{eq:SORT_kalman_initialize}
         \begin{aligned}
-            \bm{\mu}_{0 \mid 0} = \left[x, 0, y, 0, w, h\right]^{\top}
+            \bm{\mu} = \left[x, 0, y, 0, w, h\right]^{\top}
         \end{aligned}
     \end{equation}
-    として計算する．
+    として計算する．この計算はアルゴリズム\ref{alg:kalman_estimate}の初期化における$initial\_estimate$関数に相当している．
 
     また18-19行目では，時刻$t-1$で追跡している各物体に対して，何時刻分の間対応付けがされなかったのかを$calculate\_staleness$関数によって計算している．そしてこの値がある閾値$\sigma_{\text{act}}$より大きいものは追跡を止める．この閾値は，検出の精度に応じて調整することが望まれる．例えば検出の見逃し（FN）が多い場合には，この値を大きくして追跡の打ち切りを緩和したほうがよい．ただし大きくしすぎると別個体由来の検出と対応付く可能性が高くなるため，注意が必要である．
 
@@ -582,7 +575,14 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
             \subsubsection{SliceKalmanFilterの初期化}
 
-            SORTにおけるカルマンフィルタの初期化は，\ref{eq:SORT_kalman_initialize}に示すようにバウンディングボックスの変数を状態変数に代入することで行われていた．しかしながら複数のバウンディングボックス集合$O_t$を観測変数に持つSliceKalmanFilterでは，状態変数に直接代入できる変数が観測変数にない．よってSliceKalmanFilterの初期化では，
+            \begin{figure}[t]
+                \centering
+                \includegraphics[width=\linewidth]{fig/bad_initialize.pdf}
+                \caption[初期化におけるスライス画像取得のタイミングの影響]{初期化におけるスライス画像取得のタイミングの影響．物体が生成される瞬間に，取得されている画像の平面が物体の外側にあれば，上段左のように物体にかかるすべての平面でバウンディングボックスが観測される．しかし生成の瞬間に，その物体が存在する高さの平面における画像が取得されている場合，下段中央のように物体由来のバウンディングボックス集合を途中からしか得られない．}
+                \label{fig:bad_initialize}
+            \end{figure}
+
+            SORTにおけるカルマンフィルタの初期化，$initial\_estimate$関数（アルゴリズム\ref{alg:kalman_estimate}の初期化）では，\ref{eq:SORT_kalman_initialize}に示すようにバウンディングボックスの変数を状態変数に代入する処理を行っていた．しかしながら複数のバウンディングボックス集合$O_t$を観測変数に持つSliceKalmanFilterでは，状態変数に直接代入できる変数が観測変数にない．よってSliceKalmanFilterの初期化では，
             \begin{equation}
                 \label{eq:SKF_kalman_initialize}
                 \begin{aligned}
@@ -593,13 +593,6 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
                 \end{aligned}
             \end{equation}
             のように初期化を行う．また速度項についてはSORTと同様に$0$で初期化する．
-
-            \begin{figure}[t]
-                \centering
-                \includegraphics[width=\linewidth]{fig/bad_initialize.pdf}
-                \caption[初期化におけるスライス画像取得のタイミングの影響]{初期化におけるスライス画像取得のタイミングの影響．物体が生成される瞬間に，取得されている画像の平面が物体の外側にあれば，上段左のように物体にかかるすべての平面でバウンディングボックスが観測される．しかし生成の瞬間に，その物体が存在する高さの平面における画像が取得されている場合，下段中央のように物体由来のバウンディングボックス集合を途中からしか得られない．}
-                \label{fig:bad_initialize}
-            \end{figure}
 
             さらにSliceKalmanFilterの初期化は，推定の安定を図るために二時刻連続で行う．物体がある時刻で生成されるとき，各高さのスライス画像が取得されるタイミングによっては，図\ref{fig:bad_initialize}のように取得されるバウンディングボックスの情報が不十分になる．これにより，式\ref{eq:SKF_kalman_initialize}において$z$および$r$の推定精度が低くなる．よって十分なバウンディングボックスを利用した推定を行うために，生成された後二時刻分は式\ref{eq:SKF_kalman_initialize}による初期化を行う．
 
@@ -660,7 +653,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
                 \For {$s = 2 \text{ to } n_s$}
                     \State $\hat{B}_s = \emptyset$
                     \For {$O^{(i)} \text{ in } \mathcal{O}_{\text{act}}$}
-                        \State $\hat{\bm{b}}_s^{(i)} = kalman\_predict(O^{(i)})$
+                        \State $\hat{\bm{b}}_s^{(i)} = kalman\_predict(O^{(i)}, t)$
                         \State $\text{add } \hat{\bm{b}}_s^{(i)} \text{ to }\hat{B}_s $
                     \EndFor
                     \State $M_s = hungarian\_matching(\hat{B}_s, B_s)$
@@ -715,7 +708,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
                     \For {$s = 1 \text{ to } n_s$}
                         \State $\hat{B}_{t,s} = \emptyset$
                         \For {$O^{(i)} \text{ in } \mathcal{O}_{t-1}$}
-                            \State $\hat{\bm{b}}_{t,s}^{(i)} = kalman\_predict\left(\left\{\bm{b}_{t',s'}^{(i)} \mid \bm{b}_{t',s'}^{(i)} \in O^{(i)} , ~ s' = s\right\}\right)$
+                            \State $\hat{\bm{b}}_{t,s}^{(i)} = kalman\_predict\left(\left\{\bm{b}_{t',s'}^{(i)} \mid \bm{b}_{t',s'}^{(i)} \in O^{(i)} , ~ s' = s\right\}, t\right)$
                             \State $\text{add } \hat{\bm{b}}_{t,s}^{(i)} \text{ to }\hat{B}_{t,s}$
                         \EndFor
                         \State $M_{t,s} = hungarian\_matching(\hat{B}_{t,s}, B_{t,s})$
