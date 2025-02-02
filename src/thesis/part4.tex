@@ -7,7 +7,7 @@
 \section{検証用データの作成方法}
 \label{sec:demodata}
 
-本章では検証用データの作成手順を順に述べる．基本的な数式は\ref{sec:setting}節で説明した問題設定の数式を用いている．またこの章では\ref{sec:setting}節で用いた離散時刻と連続時刻を用いるため，再度$t$を連続時刻，$\tau$を離散時刻として扱う．
+本章では検証用データの作成手順を順に述べる．検証用データは，連続時間で後述の式\ref{eq:transition}にしたがって移動する複数の細胞の３Dシミュレーション動画を作成し，それから共焦点顕微鏡で実際に観測できる画像を模して離散時間の切り出したスライス画像の集合を作成した，基本的な数式は\ref{sec:setting}節で説明した問題設定の数式を用いている．またこの章では\ref{sec:setting}節で用いた離散時刻と連続時刻を用いるため，再度$t$を連続時刻，$\tau$を離散時刻として扱う．
 
 \begin{enumerate}[label=手順\arabic*]
     \item 連続的な時刻$t=0$において設定した物体数$n_b$個の物体のランダム生成を行う．物体の状態変数は式\ref{eq:continous_state_vecotr}で表される位置や，それらを微分した速度で表される．よって検証用データを生成する際にはこれらの値を決める必要がある．本研究では位置は$[0, \ell]$，速度はハイパーパラメータ$v_{\text{range}}$を用いた$[-v_{\text{range}}, v_{\text{range}}]$，半径はハイパーパラメータ$r_{\text{min}}, r_{\text{max}}$を用いて$[r_{\text{min}}, r_{\text{max}}]$から一様サンプリングして初期化する．
@@ -75,17 +75,17 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
 \begin{figure}[t]
     \begin{subfigure}[t]{0.5\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{fig/meanIoUs.pdf}
+        \includegraphics[width=\linewidth]{fig/part4/meanIoUs.pdf}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{.5\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{fig/part4/singleIoU.pdf}
+        \includegraphics[width=\linewidth]{fig/part4/singleIoU_seed358.pdf}
     \end{subfigure}
     \\    
     \begin{subfigure}[t]{0.5\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{fig/prediction_count.pdf} 
+        \includegraphics[width=\linewidth]{fig/part4/prediction_count.pdf} 
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{.5\linewidth}
@@ -142,7 +142,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
 
         \begin{figure}[t]
             \centering
-            \includegraphics[width=\linewidth]{fig/detection_maps.pdf}
+            \includegraphics[width=\linewidth]{fig/part4/detection_maps.pdf}
             \caption[提案手法におけるDetection-Mapの一部]{提案手法におけるDetection-Mapの一部．赤にプロットされた点$(t, s)$が，その物体が時刻$t$，スライス$s$の画像において検出されたことを示す．（上段）ReIDの出力にDepthSORTを用いた場合のDetection-Mapを示す．（下段）ReIDにDepthSORTを用いず，SKFの予測によって対応付いたReIDによるDetection-Mapを示す．}
             \label{fig:detection_map}
         \end{figure}
@@ -216,13 +216,9 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
             \includegraphics[width=\linewidth]{fig/part4/meanIoUs_with_ns.pdf}
         \end{subfigure}
         \\
-        \begin{subfigure}[t]{.5\linewidth}
+        \begin{subfigure}[t]{\linewidth}
             \centering
-            \includegraphics[width=\linewidth]{fig/part4/AssA_with_ns.pdf}
-        \end{subfigure}
-        \begin{subfigure}[t]{.5\linewidth}
-            \centering
-            \includegraphics[width=\linewidth]{fig/part4/IDSW_with_ns.pdf}
+            \includegraphics[width=0.66\linewidth]{fig/part4/reid_with_ns.pdf}
         \end{subfigure}
         \caption[スライス数変化の影響]{スライス数変化の影響．（上段）各提案手法ごとに，スライス数の変化がmeanIoUに与える影響を示す．色が濃くなるほどスライス数が大きくなっている．（下段）スライス数の変化がReIDに与える影響を示す．各色のプロットが各提案手法を示す．}
         \label{fig:ns_effect}
@@ -274,9 +270,9 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
         \label{tab:yolo_runtime}
         \begin{tabular}{l|ccc}
             \hline Model Size & YOLOv10-N & YOLOv10-S & YOLOv10-M  
-            \\\hline Runtime [ms] & $26.7$ & $39.4$ & $60.9$ 
+            \\\hline \hline Runtime [ms] & $26.7$ & $39.4$ & $60.9$ 
             \\ \hline Model Size & YOLOv10-B & YOLOv10-L & YOLOv10-X 
-            \\ \hline Runtime [ms] & $74.7$ & $87.6$ & $115.4$ 
+            \\ \hline \hline Runtime [ms] & $74.7$ & $87.6$ & $115.4$ 
         \end{tabular}
     \end{table}
 
@@ -311,7 +307,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
             \\
             \begin{subfigure}[t]{\linewidth}
                 \centering
-                \includegraphics[width=\linewidth]{fig/part4/reid_with_fp.pdf}
+                \includegraphics[width=0.66\linewidth]{fig/part4/reid_with_fp.pdf}
             \end{subfigure}
             \caption[物体検出のFPが追跡に及ぼす影響]{物体検出のFPが追跡に及ぼす影響．（上段）各提案手法における，FPがmeanIoUに与える影響を示す．実線の色が濃いほどFPが大きくなっている．（中段）各提案手法における，FPが予測された物体数に与える影響を示す．濃さはmeanIoUと同義である．（下段）FPを変化させた場合のReIDへの影響を示す．それぞれの色は各提案手法を表す．}
             \label{fig:FP_effect}
@@ -344,7 +340,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
             \label{fig:FN_effect}
         \end{figure}
 
-        図\ref{fig:FN_effect}に物体検出のFNが状態推定（上）および予測物体数（下）に及ぼす影響を示す．まずReIDにDetphSORTを使用しない場合（only SKF）では，FNの割合にあまり影響を受けず，状態推定の精度および予測数は安定している．一方DephtSORTを用いる二手法は，予測物体数においてどちらとも影響を受けており，特にSKF+DepthSORTでは顕著な影響が見られる．これはDepthSORTを行う際に，追跡を止める打ち切り閾値$\sigma_{\text{act}}$を$1$に設定したことが起因し，追跡が途切れたことが理由として考えられる．
+        図\ref{fig:FN_effect}に物体検出のFNが状態推定（上）および予測物体数（下）に及ぼす影響を示す．まずReIDにDepthSORTを使用しない場合（only SKF）では，FNの割合にあまり影響を受けず，状態推定の精度および予測数は安定している．一方DepthSORTを用いる二手法は，予測物体数においてどちらとも影響を受けており，特にSKF+DepthSORTでは顕著な影響が見られる．これはDepthSORTを行う際に，追跡を止める打ち切り閾値$\sigma_{\text{act}}$を$1$に設定したことが起因し，追跡が途切れたことが理由として考えられる．
 
         一方状態推定の精度に影響を及ぼしていないのは，SliceKalmanFilterが欠けた観測変数からでもある程度の精度をもって推定できているためだと推測できる．この挙動は，\ref{sec:number_of_slice_effect}節において，スライス数が少なくても状態推定の精度を保っていた挙動に似ている．もしSliceKalmanFilterがそのような，欠けた観測変数からも精度を保った推定が可能であるならば，SORT+DepthSORTの状態推定が不安定であるのは，別個体由来のバウンディングボックスが対応付けられたためと類推できる．すなわち，二次元情報をベースにした予測によって別個体由来のバウンディングボックスが対応付けられ，SliceKalmanFilterの精度を不安定にさせていると考えられる．
 
@@ -363,7 +359,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
             \\
             \begin{subfigure}[t]{\linewidth}
                 \centering
-                \includegraphics[width=\linewidth]{fig/part4/reid_with_thres.pdf}
+                \includegraphics[width=0.66\linewidth]{fig/part4/reid_with_thres.pdf}
             \end{subfigure}
             \caption[DepthSORTにおける打ち切り閾値による対処]{DepthSORTにおける打ち切り閾値による対処．（上段）各提案手法における，打ち切り閾値を変化させた場合のmeanIoUの変化を示す．実線の色が濃いほど閾値を大きくして打ち切りを緩和している．（中段）各提案手法における，打ち切り閾値を変化させた場合の予測された物体数の変化を示す．色の濃さはmeanIoUと同義である．（下段）打ち切り閾値を変化させた場合のReIDへの影響を示す．それぞれの色は各提案手法を表す．}
             \label{fig:handling_with_thres}

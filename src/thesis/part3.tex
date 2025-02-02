@@ -57,7 +57,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \begin{gathered}
                 \begin{aligned}
                     g(D_t, \mathcal{I}_{t-1}) &= O_t
-                    \\ &= \left\{\bm{d}_{\text{reid}}^{(i)} \mid i \in \mathcal{I}_t\right\}
+                    \\ &= \left\{\bm{d}_{\text{reid}}^{(i)} \mid i \in \mathcal{I}_t\right\},
                 \end{aligned}
                 \\ \textbf{where } \bm{d}_{\text{reid}}^{(i)} = \bm{d}^{(j)}, ~ \forall (i, j) \in M \textbf{ or } i \in \mathcal{I}_t \setminus \mathcal{I}_{t-1}
             \end{gathered}
@@ -601,7 +601,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
     \begin{figure}[t]
         \centering
-        \includegraphics[width=\linewidth]{fig/sort+depthsort.pdf}
+        \includegraphics[width=\linewidth]{fig/sort_depthsort.pdf}
         \caption[SORT+DepthSORTの概略図]{SORT+DepthSORTの概略図．複数のスライスにおけるバウンディングボックス集合が得られたら，スライスごとの時間方向の対応付け（Time-directional matching）と，深さ方向の対応付け（Depth-directinal matching）を行う．時間方向の対応付けでは，入力バウンディングボックスのうち，いままで追跡してきた物体由来のバウンディングボックスを見つけることができる（上段中央）．一方で深さ方向の対応付けでは，入力バウンディングボックスを個体ごとに仕分けることができる（下段右）．これら二つの処理を統合することで，いままで追跡してきた物体由来のバウンディングボックスをすべて見つけることができる（上段右）．}
         \label{fig:sort_depthsort}
     \end{figure}
@@ -753,7 +753,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \caption[ReID手法の選択肢]{ReID手法の選択肢．観測予測手法が二次元の場合はバウンディングボックスをベースとした状態変数，三次元の場合は三次元球体をベースとした状態変数から観測予測が行われる．また更新時にDepthSORTを用いる場合は，深さ方向の対応付けによって得られたReID情報が状態更新に使用される．}
             \label{tab:reidentification_methods}
             \begin{tabular}{l|cc}
-                \hline mode &  観測予測手法 & 更新時に用いるReID
+                Mode &  観測予測手法 & 更新時に用いるReID
                 \\ \hline \hline
                 SORT + DepthSORT & 二次元 & DepthSORT
                 \\ SKF + DepthSORT & 三次元 & DepthSORT
