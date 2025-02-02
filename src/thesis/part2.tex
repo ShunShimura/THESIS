@@ -23,7 +23,7 @@
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/confocal.pdf}
-        \caption[共焦点顕微鏡の概略図]{共焦点顕微鏡の概略図: 左の図では緑色の光が焦点で集まり，うまく検出されている．これにより，緑色の光が集まっている点の高さの像を捉えられる．一方右の図の赤色の光が集まっている点の高さでは，光は検出器手前のピンホールに遮られ，排除される．}
+        \caption[共焦点顕微鏡の概略図]{共焦点顕微鏡の概略図（\cite{paddock2000principles}をもとに著者が作成）．緑の光は焦点面で反射し，共役するピンホールを抜けて検出器に入る．一方赤の光は焦点面より遠い位置で反射しているために，ピンホールを抜けられず検出されない．}
         \label{fig:confocal_microscope}
     \end{figure}
 
@@ -54,20 +54,16 @@
 
     \begin{figure}[t]
         \centering
-        \begin{subfigure}[b]{.4\linewidth}
+        \begin{subfigure}[b]{.45\linewidth}
             \centering
             \includegraphics[width=\linewidth]{fig/segmentation.pdf}
-            % \caption[インスタンスセグメンテーション]{インスタンスセグメンテーション}
-            \label{fig:instance_segmentation}
         \end{subfigure}
         \hfill
-        \begin{subfigure}[b]{.4\linewidth}
+        \begin{subfigure}[b]{.45\linewidth}
             \centering
             \includegraphics[width=\linewidth]{fig/segmentation_matching.pdf}
-            % \caption[遊離直後位置との対応付け]{遊離直後位置との対応付け}
-            \label{fig:segmentation_matching}
         \end{subfigure}
-        \caption[インスタンスセグメンテーションの例と遊離直後位置との対応付け]{（左）インスタンスセグメンテーションの例：各個体や各人物はインスタンスと呼ばれ，図のように別領域として検出される．（右）：遊離直後位置との対応付け：左の画像はインスタンスセグメンテーションの結果であり，右の図は物体検出の結果である．同じ色が同じ個体として対応付けされる．}
+        \caption[インスタンスセグメンテーションと遊離直後位置との対応付け]{インスタンスセグメンテーションと遊離直後位置との対応付け．（左）各個体や各人物はインスタンスと呼ばれ，図のように別領域として検出される．（右）左の画像はインスタンスセグメンテーションの結果であり，右の図は物体検出の結果である．同じ色同士が同じ個体として対応付けされている．}
         \label{fig:instance_segmentation_and_matching}
     \end{figure}
 
@@ -136,7 +132,7 @@
 \begin{figure}[t]
     \centering
     \includegraphics[width=\linewidth]{fig/slicing.pdf}
-    \caption[得られる共焦点画像のイメージ]{得られる共焦点画像のイメージ: $n_s=10$の例を示している．ここでは各個体ごとに色を変えているが，後述する検証用データではすべて同じ白色となっている．また最下部が$s=1$とされていることに注意されたい．}
+    \caption[共焦点顕微鏡が出力するスライス画像]{共焦点顕微鏡が出力するスライス画像．ここでは$n_s=10$の例を示している．また本論文では高さが最も低い位置を$s=1$のスライスとし，反対に最も高い位置を$s=n_s$のスライスとしている．}
     \label{fig:sliced_image}
 \end{figure}
 

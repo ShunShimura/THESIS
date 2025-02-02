@@ -86,7 +86,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
         \includegraphics[width=\linewidth]{fig/part4/prediction_count_proposed.pdf}
     \end{subfigure}
     \vspace{-3zh}
-    \caption[パイプラインにおける既存手法との比較]{パイプラインにおける既存手法との比較：}
+    \caption[パイプラインにおける既存手法との比較]{パイプラインにおける既存手法との比較．（上段左）各手法における各時刻のmeanIoUを示す．実線が提案手法であり点線が既存の手法を適用したものである．（上段右）追跡する物体のうち一つのみを選んだときの各時刻のIoUを示す．またここでは提案手法のみをプロットしている．（下段）各時刻における予測が行われた物体数を示す．左右の違いは既存手法を適用した場合を（左）含んでいるか（右）含んでいないかである．}
     \label{fig:pipeline_assessment}
 \end{figure}
 
@@ -122,7 +122,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
 
         \begin{table}[t]
             \centering
-            \caption[ReIDにおける提案手法の比較]{ReIDにおける提案手法の比較：}
+            \caption[ReIDにおける提案手法の比較]{ReIDにおける提案手法の比較．各提案手法に対して予測された物体数，MOT評価指標のIDSW，そしてAssAを示している．値はシードを変えて5回実験したときの平均値，括弧の中は標準偏差を表している．}
             \label{tab:metrics_reidentification}
             \begin{tabular}{l|ccc}
                 Methods & Number of Predictions & IDSW & AssA (\%)
@@ -136,7 +136,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
         \begin{figure}[t]
             \centering
             \includegraphics[width=\linewidth]{fig/detection_maps.pdf}
-            \caption[提案するReID手法によるDetection-Mapの一部]{提案するReID手法によるDetection-Mapの一部}
+            \caption[提案手法におけるDetection-Mapの一部]{提案手法におけるDetection-Mapの一部．赤にプロットされた点$(t, s)$が，その物体が時刻$t$，スライス$s$の画像において検出されたことを示す．（上段）ReIDの出力にDepthSORTを用いた場合のDetection-Mapを示す．（下段）ReIDにDepthSORTを用いず，SKFの予測によって対応付いたReIDによるDetection-Mapを示す．}
             \label{fig:detection_map}
         \end{figure}
 
@@ -146,11 +146,8 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
 
         一方IDSWや予測物体数を比較すると，SORT+DepthSORTが最も安定し，SliceKalmanFilterのみを用いる場合は少し不安定になっていることが分かる．図の下側と合わせて考えると，DepthSORTを用いないことである同一個体由来のバウンディングボックスが分裂してしまい，別個体として追跡され，表に現れているようにIDSWや予測物体数の増加に起因したと考えられる．
 
-
     \subsection{状態推定手法の評価}
     \label{subsec:estimation_evaluation}
-
-    
 
     %%%%%%%%%%%%%%%%%%%%%
     % Naive 比較は後回し!!!! (ここでperformanceも出す) % 
@@ -172,7 +169,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
                 \centering
                 \includegraphics[width=0.5\linewidth]{fig/part4/IoU_seed1234_GT.pdf}
             \end{subfigure}
-            \caption[SliceKalmanFilterの精度評価]{SliceKalmanFilterの精度評価：}
+            \caption[SliceKalmanFilterの精度評価]{SliceKalmanFilterの精度評価．（上段）事後分布における各状態変数の平均（青）と$95\%$信頼区間（薄青）および正解ラベルの値（黒）を示す．（下段）理想的なReIDを行った場合の，ある一つの物体に対する状態予測のIoUを示す．ground truthは理想的なReIDを行ったことを意味する．}
             \label{fig:SKF_evaluation}
         \end{figure}
 
@@ -189,7 +186,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
 
     \begin{table}[t]
         \centering
-        \caption[スライス数変化の評価実験におけるデータセット]{スライス数変化の評価実験におけるデータセット：$t_c = 1.0$として計算している．}
+        \caption[スライス数変化の評価実験におけるデータセット]{スライス数変化の評価実験におけるデータセット．$t_c = 1.0$として計算している．}
         \label{tab:ns_exp_detail}
         \begin{tabular}{c|ccc}
             スライス数$n_s$ & 離散的な時間長さ & フレーム間隔$dt$ & スライス間隔$\delta z$ 
@@ -220,7 +217,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
             \centering
             \includegraphics[width=\linewidth]{fig/part4/IDSW_with_ns.pdf}
         \end{subfigure}
-        \caption[スライス数変化の影響]{スライス数変化の影響：}
+        \caption[スライス数変化の影響]{スライス数変化の影響．（上段）各提案手法ごとに，スライス数の変化がmeanIoUに与える影響を示す．色が濃くなるほどスライス数が大きくなっている．（下段）スライス数の変化がReIDに与える影響を示す．各色のプロットが各提案手法を示す．}
         \label{fig:ns_effect}
     \end{figure}
 
@@ -267,7 +264,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/yolo_f1score.pdf}
-        \caption[細胞に対する物体検出評価]{細胞に対する物体検出評価}
+        \caption[プロトプラスト化した細胞に対する物体検出評価]{プロトプラスト化した細胞に対する物体検出評価．赤の実線が精度（precision），青の実線が再現率（recall），そして黒の太実線がF1scoreを表す．また横軸は信頼度スコアの閾値である．}
         \label{fig:yolo_f1score}
     \end{figure}
 
@@ -297,7 +294,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
                 \centering
                 \includegraphics[width=\linewidth]{fig/part4/reid_with_fp.pdf}
             \end{subfigure}
-            \caption[物体検出のFPが追跡に及ぼす影響]{物体検出のFPが追跡に及ぼす影響：}
+            \caption[物体検出のFPが追跡に及ぼす影響]{物体検出のFPが追跡に及ぼす影響．（上段）各提案手法における，FPがmeanIoUに与える影響を示す．実線の色が濃いほどFPが大きくなっている．（中段）各提案手法における，FPが予測された物体数に与える影響を示す．濃さはmeanIoUと同義である．（下段）FPを変化させた場合のReIDへの影響を示す．それぞれの色は各提案手法を表す．}
             \label{fig:FP_effect}
         \end{figure}
 
@@ -324,7 +321,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
                 \centering
                 \includegraphics[width=\linewidth]{fig/part4/count_with_fn.pdf}
             \end{subfigure}
-            \caption[物体検出のFNが追跡に及ぼす影響]{物体検出のFNが追跡に及ぼす影響：}
+            \caption[物体検出のFNが追跡に及ぼす影響]{物体検出のFNが追跡に及ぼす影響．（上段）各提案手法における，FNがmeanIoUに与える影響を示す．実線の色が濃いほどFNが大きくなっている．（下段）各提案手法における，FNが予測された物体数に与える影響を示す．濃さはmeanIoUと同義である．}
             \label{fig:FN_effect}
         \end{figure}
 
@@ -349,7 +346,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
                 \centering
                 \includegraphics[width=\linewidth]{fig/part4/reid_with_thres.pdf}
             \end{subfigure}
-            \caption[DepthSORTにおける打ち切り閾値による対処]{DepthSORTにおける打ち切り閾値による対処：}
+            \caption[DepthSORTにおける打ち切り閾値による対処]{DepthSORTにおける打ち切り閾値による対処．（上段）各提案手法における，打ち切り閾値を変化させた場合のmeanIoUの変化を示す．実線の色が濃いほど閾値を大きくして打ち切りを緩和している．（中段）各提案手法における，打ち切り閾値を変化させた場合の予測された物体数の変化を示す．色の濃さはmeanIoUと同義である．（下段）打ち切り閾値を変化させた場合のReIDへの影響を示す．それぞれの色は各提案手法を表す．}
             \label{fig:handling_with_thres}
         \end{figure}
 

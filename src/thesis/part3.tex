@@ -95,8 +95,8 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/yolov10_performance.pdf}
-        \caption[yoloのバージョン比較]{yoloのバージョン比較：
-        （左）推論精度と推論時間のプロット．縦軸はCOCOデータセットにおけるAPという評価指標であり，100が最大値である．横軸は一枚の画像の物体検出にかかった時間の平均値を示している．（右）横軸にモデルの学習パラメータ数を取った場合の推論精度のプロット．学習パラメータ数を大きくするほど精度が上がっている．（\cite{wang2024yolov10}より引用）}
+        \caption[YOLOのバージョン比較]{YOLOのバージョン比較．
+        （左）推論精度と推論時間のトレードオフを示す．縦軸はCOCOデータセットにおけるAPという評価指標であり，100が最大値である．横軸は一枚の画像の物体検出にかかった時間の平均値を示している．（右）横軸にモデルの学習パラメータ数を取った場合の推論精度とのトレードオフを示す．学習パラメータ数を大きくするほど精度が上がっている．（\cite{wang2024yolov10}より引用）}
         \label{fig:yolo_tradeoff}
     \end{figure}    
 
@@ -116,7 +116,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \begin{figure}[t]
             \centering    
             \includegraphics[width=\linewidth]{fig/PTandFT.pdf}
-            \caption[事前学習と微調整]{事前学習と微調整：この図の例では，微調整時に最終層だけを取り替え，それ以外の層は学習パラメータを固定する例を示している．他にも，前半の層だけ学習の度合いを表す学習率を小さくしたり，全体に対して微調整時のみ学習率を下げるなど，様々な選択肢がある．}
+            \caption[事前学習（Pre-Training）と微調整（Fine-Tuning）]{事前学習（Pre-Training）と微調整（Fine-Tuning）．この図の例では，微調整時に最終層だけを取り替え（赤色の層），それ以外の層は学習パラメータを固定する例を示している（緑色の層）．}
             \label{fig:PTandFT}
         \end{figure}
 
@@ -126,7 +126,8 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/sort.pdf}
-        \caption[時刻$t=4$におけるSORTの処理の概略図]{時刻$t=4$におけるSORTの処理の概略図: SORTではBounding-Boxを観測変数として状態変数の推定を行う．このときに複数のBounding-Boxを同一個体へ割り当てるために対応付けを行う．図のように，対応付けは物体検出によって得たBouning-Boxと観測予測による予測Bouding-Box間で行う．図の例では，赤色と緑色の物体は状態更新が行われている．またどの予測Bounding-Boxとも対応づかなかったものは新しい個体として認識される（黄色）．}
+        \caption[SORTの処理の概略図]{SORTの処理の概略図．
+        時刻$t=4$における例を示している．時刻$t=4$のバウンディングボックスの予測は，それまでの時刻のバウンディングボックスから計算される．対応付けはこれらの予測と物体検出で得られた検出バウンディングボックス間で行われる．また対応付けがあったバウンディングボックスにはそのIDが振られ（赤と緑），なかった検出バウンディングボックスには新しい物体として新たなIDが振られる（黄）．}
         \label{fig:sort}
     \end{figure}
 
@@ -421,7 +422,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/existing_problem.pdf}
-        \caption[既存手法の問題点]{既存手法の問題点}
+        \caption[既存手法の問題点]{既存手法の問題点．左の図のように既存のMOT手法を用いる場合，二次元的な軌跡しか得られない．この場合，正確な三次元位置を予測可能かは非自明である．よって右の図のように，スライスを跨いだReIDが必要になる．}
         \label{fig:existing_problem}
     \end{figure}
 
@@ -438,7 +439,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/proposed_pipeline.pdf}
-        \caption[提案手法を組み込んだパイプライン概要]{提案手法を組み込んだパイプライン概要：}
+        \caption[提案手法を組み込んだパイプライン概要]{提案手法を組み込んだパイプライン概要．毎時刻に各スライスの二次元画像が入力され，まずはじめに物体検出に掛けられる．これにより得られたバウンディングボックスと，その時刻までの各物体の状態推定値から予測したバウンディングボックスにより，スライスを跨いだ三次元的なReIDを実施する．そして最後に，このスライスを跨いだバウンディングボックス集合を観測変数として状態推定値を更新する．}
         \label{fig:proposed_pipeline}
     \end{figure}
 
@@ -563,7 +564,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \begin{figure}[t]
                 \centering
                 \includegraphics[width=\linewidth]{fig/bad_initialize.pdf}
-                \caption[初期化におけるスライス画像取得のタイミングの影響]{初期化におけるスライス画像取得のタイミングの影響：}
+                \caption[初期化におけるスライス画像取得のタイミングの影響]{初期化におけるスライス画像取得のタイミングの影響．物体が生成される瞬間に，取得されている画像の平面が物体の外側にあれば，上段左のように物体にかかるすべての平面でバウンディングボックスが観測される．しかし生成の瞬間に，その物体が存在する高さの平面における画像が取得されている場合，下段中央のように物体由来のバウンディングボックス集合を途中からしか得られない．}
                 \label{fig:bad_initialize}
             \end{figure}
 
@@ -649,7 +650,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \begin{figure}[t]
             \centering
             \includegraphics[width=\linewidth]{fig/sort+depthsort.pdf}
-            \caption[SORT+DepthSORTの概略図]{SORT+DepthSORTの概略図：}
+            \caption[SORT+DepthSORTの概略図]{SORT+DepthSORTの概略図．複数のスライスにおけるバウンディングボックス集合が得られたら，スライスごとの時間方向の対応付け（Time-directional matching）と，深さ方向の対応付け（Depth-directinal matching）を行う．時間方向の対応付けでは，入力バウンディングボックスのうち，いままで追跡してきた物体由来のバウンディングボックスを見つけることができる（上段中央）．一方で深さ方向の対応付けでは，入力バウンディングボックスを個体ごとに仕分けることができる（下段右）．これら二つの処理を統合することで，いままで追跡してきた物体由来のバウンディングボックスをすべて見つけることができる（上段右）．}
             \label{fig:sort_depthsort}
         \end{figure}
 
