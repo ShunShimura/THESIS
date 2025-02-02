@@ -52,14 +52,16 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         と表す．ここで$N_t$は時刻$t$の画像を検出器に入力した際に，検出された物体数を表す．また$\bm{d}^{(i)}$は$i$番目の検出情報を表す．例えば検出器に物体検出器を用いれば，$\bm{d}^{(i)}$は式\ref{eq:bounding_box}で表されるバウンディングボックスである．
 
         ここで時刻$t-1$までに得られた追跡情報のIDの集合を$\mathcal{I}_{t-1} = \left\{1, 2, \dots\right\}$とし，ReIDによって，対応付けされた関係を表すペア$(i, j)$の集合$M = \left\{(i, j)\right\}$が得られたとする（$i$は$\mathcal{I}_{t-1}$，$j$は$D_t$のインデックスに対応している）．このとき$D_t$および$\mathcal{I}_{t-1}$を入力とするReIDを行う関数を$g(D_t)$とすると，その出力$O_t$は，
-        \begin{eqnarray}
+        \begin{equation}
             \label{eq:output_of_reid}
-            \begin{aligned}
-                g(D_t, \mathcal{I}_{t-1}) &= O_t
-                \\ &= \left\{\bm{d}_{\text{reid}}^{(i)} \mid i \in \mathcal{I}_t\right\}
-                \\, &\textbf{where } \bm{d}_{\text{reid}}^{(i)} = \bm{d}^{(j)} ~ \forall (i, j) \in M, \textbf{ or } i \in \mathcal{I}_t \setminus \mathcal{I}_{t-1}
-            \end{aligned}
-        \end{eqnarray}
+            \begin{gathered}
+                \begin{aligned}
+                    g(D_t, \mathcal{I}_{t-1}) &= O_t
+                    \\ &= \left\{\bm{d}_{\text{reid}}^{(i)} \mid i \in \mathcal{I}_t\right\}
+                \end{aligned}
+                \\ \textbf{where } \bm{d}_{\text{reid}}^{(i)} = \bm{d}^{(j)}, ~ \forall (i, j) \in M \textbf{ or } i \in \mathcal{I}_t \setminus \mathcal{I}_{t-1}
+            \end{gathered}
+        \end{equation}
         と表される．ここで$\mathcal{I}_t \setminus \mathcal{I}_{t-1}$は，時刻$t$で新たに検出され始めたと認識された物体のID集合を表し，$\bm{d}_{\text{reid}}^{(i)}$は時刻$t$のReIDへの入力$D_t$のうち，IDが$i$の物体に対応付けられたものか，新たに検出され始めたと認識されたものである．
 
         \subsubsection{物体検出とReIDによるTracking-by-Detection}
@@ -170,7 +172,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
     連続する二時刻分の検出された情報の対応付けは，割当問題として定式化することができる．割当問題とは，複数個のタスクと複数人の作業者を仮定し，作業者によってタスクの進行度が異なる場合に，全体の進行度を最適化するような問題のことである．物体検出の例であれば，タスクをある時刻$t-1$に検出されたバウンディングボックス集合$B_{t-1}$，作業者を時刻$t$に検出されたバウンディングボックス集合$B_{t}$とし，進行度をバウンディングボックス同士の距離の$-1$倍などにすれば，対応付けの最適化をすることができる．
 
-    ここで割当問題の定式化を行う．いま$n$人の作業者$a_1, a_2, \dots, a_n$と$n$個のタスク$b_1, b_2, \dots, b_n$があると仮定する．またある作業者$a_i$がタスク$b_j$を行った場合の進行度を表す$s_{ij}$およびすべての組み合わせを並べたスコア行列$S \in \mathbb{R}^{n \times n}$が与えられたとする．また一人の作業者には一つの仕事が割り当てられるとして，どの作業者にどのタスクが割り当てられたのかを示す割当行列$Q \in {0, 1}^{n \times n}$を最適化する対象とする．ここで割当行列の$(i,j)$成分である$q_{ij}$が$0$のとき，作業者$a_i$はタスク$b_j$を行わないことを示し，$1$であれば，タスク$b_j$が作業者$a_i$に割り当てられたことを示す．このとき割当問題は，
+    ここで割当問題の定式化を行う．いま$n$人の作業者$a_1, a_2, \dots, a_n$と$n$個のタスク$b_1, b_2, \dots, b_n$があると仮定する．またある作業者$a_i$がタスク$b_j$を行った場合の進行度を表す$s_{ij}$およびすべての組み合わせを並べたスコア行列$S \in \mathbb{R}^{n \times n}$が与えられたとする．また一人の作業者には一つの仕事が割り当てられるとして，どの作業者にどのタスクが割り当てられたのかを示す割当行列$Q \in \left\{0, 1\right\}^{n \times n}$を最適化する対象とする．ここで割当行列の$(i,j)$成分である$q_{ij}$が$0$のとき，作業者$a_i$はタスク$b_j$を行わないことを示し，$1$であれば，タスク$b_j$が作業者$a_i$に割り当てられたことを示す．このとき割当問題は，
     \begin{equation}
         \label{eq:assignment_problem}
         \begin{aligned}
@@ -184,7 +186,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     ここまでは作業者とタスクの数が同一である場合の割当問題を考えてきたが，一般的な問題設定では作業者やタスクに余りがある場合も考えられる．すなわち$n$人の作業者に$m$個のタスクを割り当てる時に，$n \neq m$の場合もあり得る．しかしながらこれを式\ref{eq:assignment_problem}の形で記述し最適化を行うと，$n=m$ならば整数解が得られることが保証される一方，$n\neq m$ではその保証はなくなる (一人に複数のタスクが割り当てられたり，一つのタスクを複数人で行うような解が得られることに相当する)．よって本問題設定のように$n \neq m$になりうる対応付けを行いたい場合は，式\ref{eq:assignment_problem}にさらに，
     \begin{equation}
         \label{eq:intger_assignment_constraint}
-        q_{ij} \in {0, 1} \quad \forall (i,j)
+        q_{ij} \in \left\{0, 1\right\}, \quad \forall (i,j)
     \end{equation}
     という非連続的な整数条件を加えなければならない．
 
@@ -336,7 +338,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
         式\ref{eq:estimation_equations_with_K}を用いて，時刻$T$までの観測系列$\bm{o}_1, \dots, \bm{o}_T$を入力として状態変数$\bm{s}_T$の推定を行うアルゴリズムをアルゴリズム\ref{alg:kalman_estimate}に示す．ただしここでは簡易化のため，状態遷移式および観測方程式における各変数は定常なものであるとした．またアルゴリズムに示すように，観測系列に抜け落ちがある場合でも，その時刻は式\ref{eq:posterior_with_bayes}に相当する処理を行わず，次の時刻の処理に移れば問題なく推定が可能である．
 
-        またカルマンフィルタでは，時刻$t$までの観測系列が得られたときに，時刻$t+1$の状態予測だけではなく，観測変数の予測も行うことができる．これを行うためには，式\ref{eq:estimation_equations_with_K}で計算される$\bm{s}_{t+1}$の期待値および分散と式\ref{eq:kalman_GL}の観測方程式から観測予測を行う．このアルゴリズムをアルゴリズム\ref{alg:kalman_predict}に示す．これは単に，アルゴリズム\ref{alg:kalman_estimate}の処理に観測行列$H$による変換を行っただけである（\ref{alg:kalman_predict}の10行目）．
+        またカルマンフィルタでは，時刻$t$までの観測系列が得られたときに，時刻$t+1$の状態予測だけではなく，観測変数の予測も行うことができる．これを行うためには，式\ref{eq:estimation_equations_with_K}で計算される$\bm{s}_{t+1}$の期待値および分散と式\ref{eq:kalman_GL}の観測方程式から観測予測を行う．このアルゴリズムをアルゴリズム\ref{alg:kalman_predict}に示す．これは単に，アルゴリズム\ref{alg:kalman_estimate}の処理に観測行列$H$による変換を行っただけである（アルゴリズム10行目）．
 
     \subsection{SORTのアルゴリズム}
     \label{subsec:sort_algorithm}
@@ -389,12 +391,12 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \label{fig:intersection_of_union}
     \end{figure}
 
-    そこでSORTでは，類似度にIntersection of Union（以後IoUと表記する）を用いる．ある二つのバウンディングボックス$\bm{b}_1, \bm{b}_2$のIoUは，図\ref{fig:intersection_of_union}のように計算される．SORTでは$f_{\text{sim}}(\bm{b}_1, \bm{b}_2) = \text{IoU}(\bm{b}_1, \bm{b}_2)$として二時刻間の対応付けを行う．IoUは重なりあう領域がまったくない場合$0$になるため，非常に対応付けに保守的であり，間違った対応付けをしなくて済む．そして保守的になった分対応づきにくくなる問題に対しては，カルマンフィルタによるバウンディングボックスの予測によって解決する．もし仮に物体がフレームレートに対して大きい速度を持っている場合には，IoUは限りなく0になりやすくなる．しかし速度や加速度を知っていれば時刻$t$のバウンディングボックスの位置を予測でき，速度などによらずIoUを高めることができる．よって速度や加速度を含んだ状態変数のカルマンフィルタを設計し，バウンディングボックスの予測を行う．
+    そこでSORTでは，類似度にIntersection of Union（以後IoUと表記する）を用いる．ある二つのバウンディングボックス$\bm{b}_1, \bm{b}_2$のIoUは，図\ref{fig:intersection_of_union}に示すように，二つのバウンディングボックスの和領域に対する積領域の割合として計算される．SORTでは$f_{\text{sim}}(\bm{b}_1, \bm{b}_2) = \text{IoU}(\bm{b}_1, \bm{b}_2)$として二時刻間の対応付けを行う．IoUは重なりあう領域がまったくない場合$0$になるため，非常に対応付けに保守的であり，間違った対応付けをしなくて済む．そして保守的になった分対応づきにくくなる問題に対しては，カルマンフィルタによるバウンディングボックスの予測によって解決する．もし仮に物体がフレームレートに対して大きい速度を持っている場合には，IoUは限りなく0になりやすくなる．しかし速度や加速度を知っていれば時刻$t$のバウンディングボックスの位置を予測でき，速度などによらずIoUを高めることができる．よって速度や加速度を含んだ状態変数のカルマンフィルタを設計し，バウンディングボックスの予測を行う．
 
     バウンディングボックスに対応する状態変数を，位置，大きさ，そして位置の一階微分である速度で表す．すなわち時刻$t$における状態変数$\bm{s}_t$は，
     \begin{equation}
         \label{eq:sort_state_vector}
-        \bm{s}_t = \left[x, \dot{x}, y, \dot{y}, w, h\right]
+        \bm{s}_t = \left[x, \dot{x}, y, \dot{y}, w, h\right]^{\top}
     \end{equation}
     で表される．このとき遷移行列$F_t$は，線形関係式
     \begin{equation}
@@ -413,7 +415,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \begin{equation}
         \label{eq:SORT_kalman_initialize}
         \begin{aligned}
-            \bm{\mu}_{0 \mid 0} = \left[x, 0, y, 0, w, h\right]
+            \bm{\mu}_{0 \mid 0} = \left[x, 0, y, 0, w, h\right]^{\top}
         \end{aligned}
     \end{equation}
     として計算する．
@@ -457,7 +459,9 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
     続くReIDでは既存手法と異なり，複数のスライスに対応した$B_{t,1}, B_{t,2}, \dots, B_{t,n_s}$が入力となる．出力としては既存手法のReIDおよびSORTと同様に，各集合に含まれるすべてのバウンディングボックス$\bm{b}$にIDを与えたものが得られる（図\ref{fig:proposed_pipeline}の(2) Re-Identification）．提案手法ではDepthSORTという高さ方向のSORTを実施することで同時刻のスライス間で対応付けを行う．これにより，後続のカルマンフィルタに三次元的な観測変数を渡すことができる．
 
-    最後に新たに設計を行うカルマンフィルタでは，異なるスライスに対応した複数のバウンディングボックスを観測変数として，三次元的な状態の推定を行う（図\ref{fig:proposed_pipeline}の(3) State Estimation）．このカルマンフィルタをSliceKalmanFilterと呼ぶこととする．この設計では，非線形な写像に対応するための拡張カルマンフィルタと，新たに提案する可変的な観測変数を利用する．
+    新たに設計を行うカルマンフィルタでは，異なるスライスに対応した複数のバウンディングボックスを観測変数として，三次元的な状態の推定を行う（図\ref{fig:proposed_pipeline}の(3) State Estimation）．このカルマンフィルタをSliceKalmanFilterと呼ぶこととする．この設計では，非線形な写像に対応するための拡張カルマンフィルタと，新たに提案する可変的な観測変数を利用する．
+
+    最後に，\ref{sec:setting}で説明した出力（式\ref{eq:cell_state_prediction}および式\ref{eq:cell_initial_state_prediction}）を得る方法について説明する．まず式\ref{eq:cell_state_prediction}で表される時刻$t+1$の予測は，カルマンフィルタの状態推定における状態予測値（アルゴリズム\ref{alg:kalman_estimate}の3行目）によって得られる．ただしここで用いられるカルマンフィルタは，三次元的な状態変数を持つSliceKalmanFilterである．また式\ref{eq:cell_initial_state_prediction}で表される初期時刻の状態推定値には，単純に各物体が追跡され始めた時刻$t_{\text{init}}$における状態推定値$\hat{\bm{s}}_{t_{\text{init}}}$を用いる．
 
     \subsection{三次元スライス画像に対応したカルマンフィルタ}
     \label{subsec:sliced_kalman_filter}
@@ -467,7 +471,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     まずは状態変数を所望の三次元情報として設計する．すなわち式\ref{eq:discreted_state_vector}を参考にして，
     \begin{equation}
         \label{eq:skf_state_vector}
-        \bm{s}_t = \left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]
+        \bm{s}_t = \left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]^{\top}
     \end{equation}
     を状態変数とする．このとき状態遷移式は一般的なカルマンフィルタの状態遷移式\ref{eq:kalman_GL}と同様に，
     \begin{equation}
@@ -479,21 +483,23 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     次に観測変数について設計を行うが，ここではまず単一のスライス$s$のみを考慮した観測変数$\bm{o}_{t, s}$を考える．この観測変数は当然ながら一つのバウンディングボックスを表すため，
     \begin{equation}
         \label{eq:single_slice_observation}
-        \bm{o}_{t, s} = \left[x_s, y_s, w_s, h_s\right]
+        \bm{o}_{t, s} = \left[x_s, y_s, w_s, h_s\right]^{\top}
     \end{equation}
     と表される．ここで\ref{sec:setting}節および式\ref{eq:appearant_radius}，\ref{eq:circle_region}で説明をした共焦点顕微鏡から得られる二次元スライス画像の特性を考慮すると，状態変数$\bm{s}_t$を入力して同時刻のスライス$s$に対する観測変数$\bm{o}_{t,s}$を返す関数$h_s(\cdot)$は，
     \begin{equation}
         \label{eq:single_slice_observation_map}
         \begin{gathered}
-            h_s(\left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]) = \left[
-                \begin{aligned}
-                    x_s &= x_t + \dot{x}_t (s - 1) t_c
-                    \\ y_s &= y_t + \dot{y}_t (s - 1) t_c
-                    \\ w_s &= 2r_t^{\text{app}}
-                    \\ h_s &= 2r_t^{\text{app}}
-                \end{aligned}
-                \right]
-            \\  ,\textbf{where } r_t^{\text{app}} = \sqrt{r_t^2 - \left\{(s - 1)\delta z - \left(z_t + \dot{z}_t (s - 1) t_c\right) \right\}^2}
+            \begin{aligned}
+                h_s(\left[x_t, \dot{x}_t, y_t, \dot{y}_t, z_t, \dot{z}_t, r_t\right]) &= \left[x_s, y_s, w_s, h_s\right]^{\top}
+                \\ &= 
+                \begin{bmatrix}
+                    x_t + \dot{x}_t (s - 1) t_c
+                    \\ y_t + \dot{y}_t (s - 1) t_c
+                    \\ 2r_t^{\text{app}}
+                    \\ 2r_t^{\text{app}}
+                \end{bmatrix},                
+            \end{aligned}
+            \\ \textbf{where } r_t^{\text{app}} = \sqrt{r_t^2 - \left\{(s - 1)\delta z - \left(z_t + \dot{z}_t (s - 1) t_c\right) \right\}^2}
         \end{gathered}
     \end{equation}
     で表される．ただし$t_c, \delta z$は\ref{sec:setting}節で説明した，それぞれ共焦点顕微鏡から一枚の二次元スライス画像を得るのに要する時間と各スライスの間隔の大きさを表している．また$r_t^{\text{app}}$は，スライス$s$に状態変数が$\bm{s}_t$である物体が映る際の見かけの半径を表している．
@@ -689,8 +695,9 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
         DepthSORTの出力はスライスを跨いだ対応付けを可能にしていたが，ここで振り分けられた各IDと，時刻$t-1$までに追跡されてきた物体のIDは関連していない．よって最後に，この深さ方向から得られたReID情報と時間方向から得られたReID情報の統合を行い，SliceKalmanFilterへの出力を得るアルゴリズムを説明する．
 
-        最終的な統合では，DepthSORTによって得られたReID情報に対して，時刻$t-1$までに追跡してきたID集合$\mathcal{I}_{t-1}$のIDを再度振り直し，そのReID情報を出力する．これはすなわち，スライスごとの対応付けで用いたID集合$\mathcal{I}_{t-1}$と，DepthSORTの結果におけるID集合$\mathcal{I}_t^{\text{d-sort}}$間の対応付けと考えることができる．よってこの問題を割当問題として考え，アルゴリズム\ref{alg:hungarian_matching}を利用することで最適化する．また割当問題におけるスコア行列の各要素$s_{ij}$は，$O_{\text{sort}}^{(i)}$と$O_{\text{d-sort}}^{(j)}$の二つの集合の積集合の要素数，すなわち$\left| O_{\text{sort}}^{(i)}\cap O_{\text{d-sort}}^{(j)}\right|$とする．
-
+        最終的な統合では，DepthSORTによって得られたReID情報に対して，時刻$t-1$までに追跡してきたID集合$\mathcal{I}_{t-1}$のIDを再度振り直し，そのReID情報を出力する．これはすなわち，スライスごとの対応付けで用いたID集合$\mathcal{I}_{t-1}$と，DepthSORTの結果におけるID集合$\mathcal{I}_t^{\text{d-sort}}$間の対応付けと考えることができる．よってこの問題を割当問題として考え，アルゴリズム\ref{alg:hungarian_matching}を利用することで最適化する．
+        また要素間の類似度を出力する関数は，共通するバウンディングボックスの個数とする．すなわち$O_{\text{sort}}^{(i)}$と$O_{\text{d-sort}}^{(j)}$の二つの集合の類似度は，$f_{\text{sim}}(O_{\text{sort}}^{(i)}, O_{\text{d-sort}}^{(j)}) = \left| O_{\text{sort}}^{(i)}\cap O_{\text{d-sort}}^{(j)}\right|$となる．
+        
         \subsubsection{SORT+DepthSORTのアルゴリズム}
 
         \begin{algorithm}[t]
@@ -708,7 +715,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
                     \For {$s = 1 \text{ to } n_s$}
                         \State $\hat{B}_{t,s} = \emptyset$
                         \For {$O^{(i)} \text{ in } \mathcal{O}_{t-1}$}
-                            \State $\hat{\bm{b}}_{t,s}^{(i)} = kalman\_predict\left(\left\{\bm{b}_{t',s'}^{(i)} \mid \bm{b}_{t',s'}^{(i)} \in O^{(i)} \land s' = s\right\}\right)$
+                            \State $\hat{\bm{b}}_{t,s}^{(i)} = kalman\_predict\left(\left\{\bm{b}_{t',s'}^{(i)} \mid \bm{b}_{t',s'}^{(i)} \in O^{(i)} , ~ s' = s\right\}\right)$
                             \State $\text{add } \hat{\bm{b}}_{t,s}^{(i)} \text{ to }\hat{B}_{t,s}$
                         \EndFor
                         \State $M_{t,s} = hungarian\_matching(\hat{B}_{t,s}, B_{t,s})$
@@ -720,7 +727,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
                             \EndIf
                         \EndFor
                     \EndFor 
-                    \State $\mathcal{O}_{\text{d-sort}} \gets depth\_sort\left(\left\{B_{t',s} \mid B_{t',s} \in \mathcal{B} \land t' = t\right\}\right)$
+                    \State $\mathcal{O}_{\text{d-sort}} \gets depth\_sort\left(\left\{B_{t',s} \mid B_{t',s} \in \mathcal{B} , ~ t' = t\right\}\right)$
                     \State $M_t = hungarian\_matching(\mathcal{O}_{\text{sort}}, \mathcal{O}_{\text{d-sort}})$
                     \For {$(i,j) \text{ in } M_t$}
                         \State $O^{(i)} \gets O^{(i)} \cup O_{\text{d-sort}}^{(j)}$
@@ -750,14 +757,14 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
         \begin{table}[t]
             \centering
-            \caption[ReID手法の選択肢]{ReID手法の選択肢}
+            \caption[ReID手法の選択肢]{ReID手法の選択肢．観測予測手法が二次元の場合はバウンディングボックスをベースとした状態変数，三次元の場合は三次元球体をベースとした状態変数から観測予測が行われる．また更新時にDepthSORTを用いる場合は，深さ方向の対応付けによって得られたReID情報が状態更新に使用される．}
             \label{tab:reidentification_methods}
             \begin{tabular}{l|cc}
                 \hline mode &  観測予測手法 & 更新時に用いるReID
                 \\ \hline \hline
                 SORT + DepthSORT & 二次元 & DepthSORT
                 \\ SKF + DepthSORT & 三次元 & DepthSORT
-                \\ only SKF & 三次元 & スライスごと
+                \\ only SKF & 三次元 & スライスごと 
             \end{tabular}
         \end{table}
 
