@@ -172,7 +172,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
                 \centering
                 \includegraphics[width=0.5\linewidth]{fig/part4/IoU_seed1234_GT.pdf}
             \end{subfigure}
-            \caption[SliceKalmanFilterの精度評価]{SliceKalmanFilterの精度評価．（上段）事後分布における各状態変数の平均（青）と$95\%$信頼区間（薄青）および正解ラベルの値（黒）を示す．（下段）理想的なReIDを行った場合の，ある一つの物体に対する状態予測のIoUを示す．ground truthは理想的なReIDを行ったことを意味する．}
+            \caption[SliceKalmanFilterの精度評価]{SliceKalmanFilterの精度評価．（上段）事後分布における各状態変数の平均（青色）と$95\%$信頼区間（薄青色）および正解ラベルの値（黒色）を示す．（下段）理想的なReIDを行った場合の，ある一つの物体に対する状態予測のIoUを示す．ground truthは理想的なReIDを行ったことを意味する．}
             \label{fig:SKF_evaluation}
         \end{figure}
 
@@ -236,6 +236,8 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
     \subsection{プロトプラスト化した細胞に対する物体検出評価}
     \label{subsec:detection_of_protoplast}
 
+    本項では，図\ref{fig:protoplast_and_main_system}（左）に示すような共焦点画像を対象として物体検出の評価を行う．このとき物体検出の対象となるのは，当画像において球体のように見られるプロトプラストである．この計算機実験は後続の追跡に与える影響を評価するために行われるため，追跡に重大な影響を及ぼすと考えられるFPとFNに着目して評価を行う．
+
     \subsubsection{実装詳細}
 
     本実験では，物体検出モデルとしてYOLOv10の六つのサイズ（N/S/M/B/L/X）で評価を行う（原論文\cite{wang2024yolov10}のTable1）．また微調整（Fine-Tuning）には，共焦点顕微鏡から得られた$865$枚の画像にアノテーションを実施し，そのうち$692$枚を学習データ，残りの$173$枚を検証データとした．微調整のハイパーパラメータについてはYOLOv10の原論文\cite{wang2024yolov10}のTable14と同様である．またクラス数は，遊離した細胞の一つのみに設定した．さらに推論時には，冗長な検出を防ぐためにNMS（\ref{subsec:object_detection}項）を追加して行った．
@@ -277,7 +279,7 @@ meanIoUは，予測された球体ごとに正解ラベル球体とIoUを計算�
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/yolo_f1score.pdf}
-        \caption[プロトプラスト化した細胞に対する物体検出評価]{プロトプラスト化した細胞に対する物体検出評価．赤の実線が精度（precision），青の実線が再現率（recall），そして黒の太実線がF1scoreを表す．また横軸は信頼度スコアの閾値である．}
+        \caption[プロトプラスト化した細胞に対する物体検出評価]{プロトプラスト化した細胞に対する物体検出評価．赤色の実線が精度（Precision），青色の実線が再現率（Recall），そして黒色の太実線がF1scoreを表す．また横軸は信頼度スコアの閾値である．}
         \label{fig:yolo_f1score}
     \end{figure}
 

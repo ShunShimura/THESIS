@@ -129,7 +129,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \centering
         \includegraphics[width=\linewidth]{fig/sort.pdf}
         \caption[SORTの処理の概略図]{SORTの処理の概略図．
-        時刻$t=4$における例を示している．時刻$t=4$のバウンディングボックスの予測は，それまでの時刻のバウンディングボックスから計算される．対応付けはこれらの予測と物体検出で得られた検出バウンディングボックス間で行われる．また対応付けがあったバウンディングボックスにはそのIDが振られ（赤と緑），なかった検出バウンディングボックスには新しい物体として新たなIDが振られる（黄）．}
+        時刻$t=4$における例を示している．時刻$t=4$のバウンディングボックスの予測は，それまでの時刻のバウンディングボックスから計算される．対応付けはこれらの予測と物体検出で得られた検出バウンディングボックス間で行われる．また対応付けがあったバウンディングボックスにはそのIDが振られ（赤色と緑色），なかった検出バウンディングボックスには新しい物体として新たなIDが振られる（黄色）．}
         \label{fig:sort}
     \end{figure}
 
@@ -427,13 +427,13 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \begin{figure}[t]
         \centering
         \includegraphics[width=\linewidth]{fig/existing_problem.pdf}
-        \caption[既存手法の問題点]{既存手法の問題点．左の図のように既存のMOT手法を用いる場合，二次元的な軌跡しか得られない．この場合，正確な三次元位置を予測可能かは非自明である．よって右の図のように，スライスを跨いだReIDが必要になる．}
+        \caption[既存手法の問題点]{既存手法の問題点．黒色の平面が各画像，赤色の矩形が検出されたバウンディングボックスを表す．また重ねられた画像は，スライスの高さが異なっている．右の図におけるバウンディングボックスは，すべて同一の個体由来のバウンディングボックスを示している．}
         \label{fig:existing_problem}
     \end{figure}
 
     そこで次節で説明する提案手法では，まず問題点の一つ目である三次元的な状態推定のためのカルマンフィルタの設計を行う．この設計では，物体検出から得られるバウンディングボックスの集合を観測変数，推定したい変数を状態変数とした非常に直感的な状態空間モデルを使用する．そして問題点の二つ目である三次元的な観測変数の獲得方法として，DepthSORTというアルゴリズムを組み合わせたReID手法を提案する．このDepthSORTのアルゴリズム自体は既存手法の一部であるSORTと同様であり，発想自体も非常に単純である．このReID手法によって，図\ref{fig:existing_problem}（右）に示すような，一時刻に複数のバウンディングボックスを持った，三次元的な観測変数の取得を可能にする．
 
-\section{新しいカルマンフィルタの設計および三次元スライス画像のReID手法}
+\section{新しいカルマンフィルタの設計および複数スライスに対応したReID手法}
 \label{sec:proposed_method}
 
 本章では，はじめに提案手法の概要を述べた後，提案部分であるSliceKalmanFilterおよびSORT+DepthSORTによるReIDについて詳細に述べる．
@@ -456,7 +456,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
     最後に，\ref{sec:setting}節で説明した出力（式\ref{eq:cell_state_prediction}および式\ref{eq:cell_initial_state_prediction}）を得る方法について説明する．まず式\ref{eq:cell_state_prediction}で表される時刻$t+1$の予測は，カルマンフィルタの状態推定における状態予測値（アルゴリズム\ref{alg:kalman_estimate}の3行目）によって得られる．ただしここで用いられるカルマンフィルタは，三次元的な状態変数を持つSliceKalmanFilterである．また式\ref{eq:cell_initial_state_prediction}で表される初期時刻の状態推定値には，単純に各物体が追跡され始めた時刻$t_{\text{init}}$における状態推定値$\hat{\bm{s}}_{t_{\text{init}}}$を用いる．
 
-    \subsection{三次元スライス画像に対応したカルマンフィルタ}
+    \subsection{複数スライスに対応したカルマンフィルタ}
     \label{subsec:sliced_kalman_filter}
     
     既存手法におけるカルマンフィルタの役割は，対応付けに用いるバウンディングボックスを予測することであった．しかしながら本問題設定では，観測系列から直接得ることができない三次元情報を推定しなければならない．そこでわれわれは対応付け用のカルマンフィルタとは別に，SliceKalmanFilterと呼ばれる新たな状態推定用のカルマンフィルタを構築する．
@@ -596,7 +596,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
             さらにSliceKalmanFilterの初期化は，推定の安定を図るために二時刻連続で行う．物体がある時刻で生成されるとき，各高さのスライス画像が取得されるタイミングによっては，図\ref{fig:bad_initialize}のように取得されるバウンディングボックスの情報が不十分になる．これにより，式\ref{eq:SKF_kalman_initialize}において$z$および$r$の推定精度が低くなる．よって十分なバウンディングボックスを利用した推定を行うために，生成された後二時刻分は式\ref{eq:SKF_kalman_initialize}による初期化を行う．
 
-    \subsection{三次元スライス画像に対応したReID}
+    \subsection{複数スライスに対応したReID}
     \label{subsec:re-identificataion_for_slice}
 
     \begin{figure}[t]
