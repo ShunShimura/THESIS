@@ -176,9 +176,9 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
     \begin{equation}
         \label{eq:assignment_problem}
         \begin{aligned}
-            &&\text{Minimize } &\sum _{(i, j)} s_{ij} q_{ij}  
-            \\ &&&\text{s.t.}\quad \sum_i q_{ij} = 1,\quad \forall j = 1, 2, \dots, n
-            \\ &&&\phantom{\text{s.t.}}\quad \sum_j q_{ij} = 1,\quad \forall i = 1,2,\dots, n
+            \text{Minimize }& \sum _{(i, j)} s_{ij} q_{ij}  
+            \\ \text{s.t. }& \sum_i q_{ij} = 1,\quad \forall j = 1, 2, \dots, n
+            \\ \phantom{\text{s.t.} }& \sum_j q_{ij} = 1,\quad \forall i = 1,2,\dots, n
         \end{aligned}
     \end{equation}
     と表される．ハンガリー法\cite{kuhn1955hungarian}は，このように表される最適化問題を高速に解くことができるアルゴリズムである．
@@ -229,7 +229,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \begin{equation}
             \label{eq:kalman_GL}
             \begin{aligned}
-                \bm{s}_{t+1} &= F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
+                \bm{s}_{t+1} &= F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t),
                 \\ \bm{o}_t &= H_t \bm{s}_t + \bm{w}_t, \quad \bm{w}_t \sim \mathcal{N}(\bm{0}, R_t)
             \end{aligned}        
         \end{equation}
@@ -239,7 +239,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \begin{equation}
             \label{eq:kalman_with_markov}
             \begin{aligned}
-                p(\bm{s}_{t} \mid \bm{s}_{t-1}, \bm{o}_1, \dots, \bm{o}_t) &= p(\bm{s}_t \mid \bm{s}_t)
+                p(\bm{s}_{t} \mid \bm{s}_{t-1}, \bm{o}_1, \dots, \bm{o}_t) &= p(\bm{s}_t \mid \bm{s}_t),
                 \\p(\bm{o}_t \mid \bm{o}_1, \dots, \bm{o}_{t-1}, \bm{s}_t) &= p(\bm{o}_t \mid \bm{s}_t)
             \end{aligned}
         \end{equation}
@@ -247,7 +247,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \begin{equation}
             \label{eq:linear_transition_and_observation}
             \begin{aligned}
-                p(\bm{s}_t \mid \bm{s}_{t-1}) &= \mathcal{N}(F_{t-1} \bm{s}_{t-1}, Q_{t-1})
+                p(\bm{s}_t \mid \bm{s}_{t-1}) &= \mathcal{N}(F_{t-1} \bm{s}_{t-1}, Q_{t-1}),
                 \\ p(\bm{o}_t \mid \bm{s}_t) &= \mathcal{N}(H_t \bm{s}_{t}, R_t)
             \end{aligned}
         \end{equation}
@@ -257,7 +257,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \begin{equation}
             \label{eq:normal_dist_representation}
             \begin{aligned}
-                p(\bm{s}_t \mid \bm{o}1, \dots, \bm{o}_t)& = \mathcal{N}\left(\bm{\mu}_{t \mid t}, \Sigma_{t \mid t}\right)
+                p(\bm{s}_t \mid \bm{o}1, \dots, \bm{o}_t)& = \mathcal{N}\left(\bm{\mu}_{t \mid t}, \Sigma_{t \mid t}\right),
                 \\ p(\bm{s}_{t+1} \mid \bm{o}1, \dots, \bm{o}_t) &= \mathcal{N}\left(\bm{\mu}_{t+1 \mid t}, \Sigma_{t+1 \mid t}\right)
             \end{aligned}
         \end{equation}
@@ -265,9 +265,9 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \begin{equation}
             \label{eq:estimation_equations}
             \begin{aligned}
-                \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1}
-                \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1}
-                \\\bm{\mu}_{t \mid t} &= \Sigma_{t \mid t} \left( H_t R_t^{-1} \bm{o}_t + \Sigma_{t \mid t-1}^{-1} \bm{\mu}_{t \mid t-1} \right)
+                \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1},
+                \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1},
+                \\\bm{\mu}_{t \mid t} &= \Sigma_{t \mid t} \left( H_t R_t^{-1} \bm{o}_t + \Sigma_{t \mid t-1}^{-1} \bm{\mu}_{t \mid t-1} \right),
                 \\\Sigma_{t \mid t} &= \left( H_t R_t^{-1} H_t^{\top} + \Sigma_{t \mid t-1}^{-1}\right)^{-1}
             \end{aligned}
         \end{equation}
@@ -280,9 +280,9 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \begin{equation}
             \label{eq:estimation_equations_with_K}
             \begin{aligned}
-                \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1}
-                \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1}
-                \\\bm{\mu}_{t \mid t} &= \bm{\mu}_{t \mid t-1} + K_t \left(\bm{o}_t - H_t \bm{\mu}_{t \mid t-1}\right)
+                \bm{\mu}_{t \mid t-1} &= F_{t-1} \bm{\mu}_{t-1 \mid t-1},
+                \\\Sigma_{t \mid t-1} &= F_{t-1} \Sigma_{t-1 \mid t-1} F_{t-1}^{\top} + Q_{t-1},
+                \\\bm{\mu}_{t \mid t} &= \bm{\mu}_{t \mid t-1} + K_t \left(\bm{o}_t - H_t \bm{\mu}_{t \mid t-1}\right),
                 \\\Sigma_{t \mid t} &= (I - K_t H_t) \Sigma_{t \mid t-1}
             \end{aligned}                    
         \end{equation}
@@ -400,7 +400,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \\a_t &\sim \mathcal{N}(0, A_x)
         \end{aligned}
     \end{equation}
-    を満たすように設計される．ただし$a_t$は正規性をもつノイズであり，システムに対して加速度として加算される．また$A_x$はその分散を表す．ここでは冗長性のため$x$のみに対する関係を記述したが，$y$についても同様の関係が成り立つ．また観測行列$H_t$は，状態変数の$0$階微分成分をそのまま利用するように設計される．
+    を満たすように設計される．ここで$dt$は，離散的な時刻間に相当する連続時間長さである．また$a_t$は正規性をもつノイズであり，システムに対して加速度として加算される．$A_x$はその分散を表す．ここでは冗長性のため$x$のみに対する関係を記述したが，$y$についても同様の関係が成り立つ．また観測行列$H_t$は，状態変数の$0$階微分成分をそのまま利用するように設計される．
 
     SORTの処理をアルゴリズム\ref{alg:sort}に示す．ただしここでの出力はIDごとの観測系列になっていることに注意されたい．アルゴリズム\ref{alg:object_detection_and_reidentification}でも示したように，Tracking-by-Detectionでは時刻$t$のReIDにおいて，時刻$t-1$までのReID結果$O_1, O_2, \dots, O_{t-1}$を得ている．これをIDごとに分ければ，各個体の軌跡，言い換えれば観測系列を得ることができる．これを用いてSORTは，時刻$t$のバウンディングボックス集合$B_t$を得たときに，はじめに$B_t$の予測を行う（8-9行目）．そしてその予測バウンディングボックスと実際に検出されたバウンディングボックス集合とで，割当問題およびハンガリー法による対応付けを行う（12行目）．そして対応付けられたバウンディングボックスを軌跡$O^{(i)}$に加える（14-16行目）．ここまでがSORTの基本的な時刻$t$における処理である．
     
@@ -471,7 +471,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \label{eq:skf_state_transition}
         \bm{s}_{t+1} = F_t \bm{s}_t + \bm{v}_t, \quad \bm{v}_t \sim \mathcal{N}(\bm{0}, Q_t)
     \end{equation}
-    で表され，遷移行列$F_t$は位置$(x,y,z)$に対して式\ref{eq:sort_transition}を満たすように設計される．また半径$r_t$は定常であると仮定する．
+    で表され，遷移行列$F_t$は位置$(x,y,z)$に対して式\ref{eq:sort_transition}を満たすように設計される．また半径$r_t$は定常であると仮定する．またSliceKalmanFilterにおける$dt$は，フレーム間隔である$\delta t$であることに注意されたい．
 
     次に観測変数について設計を行うが，ここではまず単一のスライス$s$のみを考慮した観測変数$\bm{o}_{t, s}$を考える．この観測変数は当然ながら一つのバウンディングボックスを表すため，
     \begin{equation}

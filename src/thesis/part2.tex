@@ -89,8 +89,8 @@
 \begin{equation}
     \label{eq:delta_time_and_z}
     \begin{aligned}
-        \delta t &= n_s  t_c
-        \\ \delta z &= \frac{\ell}{n_s - 1}
+        \delta & t = n_s  t_c ,
+        \\ \delta & z = \frac{\ell}{n_s - 1}
     \end{aligned}
 \end{equation}
 が成り立つ．（これらの式から，対象空間の広さ$\ell$と二次元画像の取得にかかる時間$t_c$が定数であれば，スライスする平面数$n_s$によってフレーム間隔とスライス間隔のトレードオフが生じることが分かる．）
@@ -99,8 +99,8 @@
 \begin{equation}
     \label{eq:sliced_images}
     \begin{aligned}
-        \mathcal{X}_{\tau} &= \left\{X_{\tau, s} \mid s \in \left\{1, 2, \dots, n_s\right\}\right\}
-        \\ X_{\tau, s} &\in \mathbb{R}^{W \times H \times 3}
+        & \mathcal{X}_{\tau} = \left\{X_{\tau, s} \mid s \in \left\{1, 2, \dots, n_s\right\}\right\},
+        \\ & \textbf{where } X_{\tau, s} \in \mathbb{R}^{W \times H \times 3},
     \end{aligned}
 \end{equation}
 と表す．ここで$s$は，どの焦点面であるかを示すスライスのインデックスであり，対象領域の$\Omega$において$z = 0$の平面が$s=1$，$z = \ell$の平面が$s=n_s$に相当する．また$X_{\tau, s}$は，離散時刻$\tau$に$s = 1$の二次元画像が取得された$(s - 1) t_c$後に$z = (s - 1) \delta z$の平面で取得された二次元画像である．また$W$は画像の幅，$H$は高さ，$3$はRGBに対応している．
@@ -147,7 +147,7 @@
 また本システムではリアルタイムに細胞を収集するため，細胞の状態予測や遊離直後の状態推定の対象となる細胞は，最新の離散時刻$\tau$の画像が取得された際にその画像内に写っていた細胞といえる．よってその細胞の集合を$\mathcal{I}_\tau = \left\{1, 2, \dots\right\}$と表すことにする．これを用いると，AIシステムの細胞の状態予測集合$S^{\text{pred}}_{\tau}$および遊離直後の状態推定集合$S^{\text{init}}_{\tau}$は，
 \begin{equation}
     \label{eq:cell_state_prediction}
-    S^{\text{pred}}_{\tau} = \left\{\hat{\bm{s}}_{\tau + 1}^{(i)} \mid i \in \mathcal{I}_{\tau}\right\}
+    S^{\text{pred}}_{\tau} = \left\{\hat{\bm{s}}_{\tau + 1}^{(i)} \mid i \in \mathcal{I}_{\tau}\right\},
 \end{equation}
 \begin{equation}
     \label{eq:cell_initial_state_prediction}
