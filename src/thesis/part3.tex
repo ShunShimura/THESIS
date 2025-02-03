@@ -1,6 +1,6 @@
 \thispagestyle{fancy2}
 
-本章では，まず既存の要素技術として，Tracking-by-Detectionのフレームワークおよび有名な構成要素である，物体検出手法のYOLO，対応付け手法のSORTについて詳細に述べる（\ref{sec:existing_method}節）．そしてそれらをもとに，複数の二次元画像入力に対応した提案手法の説明を行う（\ref{sec:proposed_method}節）．提案部分としては，三次元的な状態推定を可能にするSliceKalmanFilter（\ref{subsec:sliced_kalman_filter}項）と，スライスを跨いだ対応付けを可能にするDepthSORT（\ref{subsec:re-identificataion_for_slice}項）の説明を述べる．
+本章では，まず既存の要素技術として，Tracking-by-Detectionのフレームワークおよび有名な構成要素である，物体検出手法のYOLO，対応付け手法のSORTについて詳細に述べる（\ref{sec:existing_method}節）．そしてそれらをもとに，複数の二次元画像入力に対応した提案手法の説明を行う（\ref{sec:proposed_method}節）．提案部分としては，三次元的な状態推定を可能にするSliceKalmanFilter（\ref{subsec:sliced_kalman_filter}項）と，スライスを跨いだ対応付けを可能にするDepthSORT（\ref{subsec:reidentificataion_for_slice}項）の説明を述べる．
 
 \section{Tracking-by-Detectionの既存手法と適用上の問題点}
 \label{sec:existing_method}
@@ -436,7 +436,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 \section{新しいカルマンフィルタの設計および複数スライスに対応したReID手法}
 \label{sec:proposed_method}
 
-本章では，はじめに提案手法の概要を述べた後（\ref{subsec:proposed_pipeline}節），提案部分であるSliceKalmanFilter（\ref{subsec:sliced_kalman_filter}節）およびDepthSORTを利用したReIDについて詳細に述べる（\ref{subsec:re-identificataion_for_slice}節）．
+本章では，はじめに提案手法の概要を述べた後（\ref{subsec:proposed_pipeline}節），提案部分であるSliceKalmanFilter（\ref{subsec:sliced_kalman_filter}節）およびDepthSORTを利用したReIDについて詳細に述べる（\ref{subsec:reidentificataion_for_slice}節）．
 
     \subsection{提案手法のパイプライン概要}
     \label{subsec:proposed_pipeline}
