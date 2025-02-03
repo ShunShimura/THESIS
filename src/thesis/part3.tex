@@ -478,7 +478,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \label{eq:single_slice_observation}
         \bm{o}_{t, s} = \left[x_s, y_s, w_s, h_s\right]^{\top}
     \end{equation}
-    と表される．ここで\ref{sec:setting}節および式\ref{eq:appearant_radius}，\ref{eq:circle_region}で説明をした共焦点顕微鏡から得られる二次元スライス画像の特性を考慮すると，状態変数$\bm{s}_t$を入力して同時刻のスライス$s$に対する観測変数$\bm{o}_{t,s}$を返す関数$h_s(\cdot)$は，
+    と表される．ここで\ref{sec:setting}節および式\ref{eq:appearant_radius}，\ref{eq:circle_region}で説明をした共焦点顕微鏡から得られる二次元画像の特性を考慮すると，状態変数$\bm{s}_t$を入力して同時刻のスライス$s$に対する観測変数$\bm{o}_{t,s}$を返す関数$h_s(\cdot)$は，
     \begin{equation}
         \label{eq:single_slice_observation_map}
         \begin{gathered}
@@ -495,7 +495,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \\ \textbf{where } r_t^{\text{app}} = \sqrt{r_t^2 - \left\{(s - 1)\delta z - \left(z_t + \dot{z}_t (s - 1) t_c\right) \right\}^2}
         \end{gathered}
     \end{equation}
-    で表される．ただし$t_c, \delta z$は\ref{sec:setting}節で説明した，それぞれ共焦点顕微鏡から一枚の二次元スライス画像を得るのに要する時間と各スライスの間隔の大きさを表している．また$r_t^{\text{app}}$は，スライス$s$に状態変数が$\bm{s}_t$である物体が映る際の見かけの半径を表している（ただしここでは，平面の高さを表す$z$を省略している）．
+    で表される．ただし$t_c, \delta z$は\ref{sec:setting}節で説明した，それぞれ共焦点顕微鏡から一枚の二次元画像を得るのに要する時間と各スライスの間隔の大きさを表している．また$r_t^{\text{app}}$は，スライス$s$に状態変数が$\bm{s}_t$である物体が映る際の見かけの半径を表している（ただしここでは，平面の高さを表す$z$を省略している）．
 
     この式の注意すべき点は二つある．一つ目は，この観測変数と状態変数の関係が非線形な関係にあることである．式\ref{eq:kalman_GL}で仮定したように，一般的なカルマンフィルタではこの両者の関係に線形性を仮定していたため，何かしらの拡張が必要である．よって提案手法では，拡張カルマンフィルタ\cite{bishop2001introduction}を利用する．また注意すべき二つ目の点は，式\ref{eq:single_slice_observation_map}において，見かけの半径$r_t^{\text{app}}$の右辺の中身が$0$より大きくなければ，そもそも観測変数$\bm{o}_{t,s}$が存在し得ないことである．これについては，拡張カルマンフィルタの説明のあとに詳細を述べる．
 
@@ -578,7 +578,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \begin{figure}[t]
                 \centering
                 \includegraphics[width=\linewidth]{fig/bad_initialize.pdf}
-                \caption[初期化におけるスライス画像取得のタイミングの影響]{初期化におけるスライス画像取得のタイミングの影響．物体が生成される瞬間に，取得されている画像の平面が物体の外側にあれば，上段左のように物体にかかるすべての平面でバウンディングボックスが観測される．しかし生成の瞬間に，その物体が存在する高さの平面における画像が取得されている場合，下段中央のように物体由来のバウンディングボックス集合を途中からしか得られない．}
+                \caption[初期化におけるスライス取得のタイミングの影響]{初期化におけるスライス取得のタイミングの影響．物体が生成される瞬間に，取得されている画像の平面が物体の外側にあれば，上段左のように物体にかかるすべての平面でバウンディングボックスが観測される．しかし生成の瞬間に，その物体が存在する高さの平面における画像が取得されている場合，下段中央のように物体由来のバウンディングボックス集合を途中からしか得られない．}
                 \label{fig:bad_initialize}
             \end{figure}
 
@@ -594,7 +594,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \end{equation}
             のように初期化を行う．また速度項についてはSORTと同様に$0$で初期化する．
 
-            さらにSliceKalmanFilterの初期化は，推定の安定を図るために二時刻連続で行う．物体がある時刻で生成されるとき，各高さのスライス画像が取得されるタイミングによっては，図\ref{fig:bad_initialize}のように取得されるバウンディングボックスの情報が不十分になる．これにより，式\ref{eq:SKF_kalman_initialize}において$z$および$r$の推定精度が低くなる．よって十分なバウンディングボックスを利用した推定を行うために，生成された後二時刻分は式\ref{eq:SKF_kalman_initialize}による初期化を行う．
+            さらにSliceKalmanFilterの初期化は，推定の安定を図るために二時刻連続で行う．物体がある時刻で生成されるとき，各高さの画像が取得されるタイミングによっては，図\ref{fig:bad_initialize}のように取得されるバウンディングボックスの情報が不十分になる．これにより，式\ref{eq:SKF_kalman_initialize}において$z$および$r$の推定精度が低くなる．よって十分なバウンディングボックスを利用した推定を行うために，生成された後二時刻分は式\ref{eq:SKF_kalman_initialize}による初期化を行う．
 
     \subsection{複数スライスに対応したReID}
     \label{subsec:re-identificataion_for_slice}
