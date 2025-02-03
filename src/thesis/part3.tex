@@ -9,7 +9,7 @@ Tracking-by-Detectionでは，毎時刻に得られるデータをそのたび�
 
 YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を高速で行うことができるニューラルネットワークである．物体追跡ではリアルタイム性が重視されるため，特にYOLOはTracking-by-Detectionの検出器として利用される．またSORT（Simple Onle Realtime Tracking）\cite{bewley2016simple,wojke2017simple,du2023strongsort}は，IDを割り振ることで追跡を達成する最も単純な手法であり，対応付け手法の基盤として優れている．このSORTは，連続する二時刻のフレーム間で対応付けを最適化するハンガリー法\cite{kuhn1955hungarian}と，対応付けに予測位置を利用するためのカルマンフィルタ\cite{bishop2001introduction}で構成されている．
 
-よって以降の節では，YOLOとSORTを組み合わせたTracking-by-Detectionの全体のアルゴリズムを述べた後，YOLO，ハンガリー法，そしてカルマンフィルタについてそのアーキテクチャやアルゴリズムについて詳細に述べる．
+よって以降の節では，YOLOとSORTを組み合わせたTracking-by-Detectionの全体の概要を述べた後（\ref{subsec:yolo_and_sort}項），物体検出手法のYOLO（\ref{subsec:object_detection}項）と追跡手法のSORTの概要（\ref{subsec:abstract_of_sort}項）を述べる．またSORTを構成するハンガリー法による割当問題（\ref{subsec:hungarian_algorithm}項）とカルマンフィルタ（\ref{subsec:kalman_filter}項）について述べる．これらの要素技術は後述の提案手法（\ref{sec:proposed_method}節）でも利用されるため，詳細に説明を述べている．そしてそのあとにSORTのアルゴリズムを詳細に述べる（\ref{subsec:sort_algorithm}項）．また最後には，この既存手法を本問題設定に適用するうえで生じる問題について議論する（\ref{subsec:existing_problem}項）．
 
     \subsection{YOLOとSORTによるTracking-by-Detection}
     \label{subsec:yolo_and_sort}
@@ -436,7 +436,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 \section{新しいカルマンフィルタの設計および複数スライスに対応したReID手法}
 \label{sec:proposed_method}
 
-本章では，はじめに提案手法の概要を述べた後，提案部分であるSliceKalmanFilterおよびSORT+DepthSORTによるReIDについて詳細に述べる．
+本章では，はじめに提案手法の概要を述べた後（\ref{subsec:proposed_pipeline}節），提案部分であるSliceKalmanFilter（\ref{subsec:sliced_kalman_filter}節）およびDepthSORTを利用したReIDについて詳細に述べる（\ref{subsec:re-identificataion_for_slice}節）．
 
     \subsection{提案手法のパイプライン概要}
     \label{subsec:proposed_pipeline}
