@@ -7,7 +7,7 @@
 
 Tracking-by-Detectionでは，毎時刻に得られるデータをそのたびに検出器に入力し，そのデータ内に存在する各物体の情報を得る．そして続く追跡では，新しく得られた各物体の情報に対して，今までに得られたどの物体と同じ物体であるのか，もしくは今までにない新しい物体なのかを判断する対応付けを行う．
 
-YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を高速で行うことができるニューラルネットワークである．物体追跡ではリアルタイム性が重視されるため，特にYOLOはTracking-by-Detectionの検出器として利用される．またSORT（Simple Onle Realtime Tracking）\cite{bewley2016simple,wojke2017simple,du2023strongsort}は，IDを割り振ることで追跡を達成する最も単純な手法であり，対応付け手法の基盤として優れている．このSORTは，連続する二時刻のフレーム間で対応付けを最適化するハンガリー法\cite{kuhn1955hungarian}と，対応付けに予測位置を利用するためのカルマンフィルタ\cite{bishop2001introduction}で構成されている．
+YOLO（You Only Look Once）\cite{redmon2016you,alif2024yolov1}は，検出を高速で行うことができるニューラルネットワークである．物体追跡ではリアルタイム性が重視されるため，特にYOLOはTracking-by-Detectionの検出器として利用される．またSORT（Simple Onle Realtime Tracking）\cite{bewley2016simple,wojke2017simple,du2023strongsort}は，IDを割り振ることで追跡を達成する最も単純な手法であり，対応付け手法の基盤として優れている．このSORTは，連続する二時刻のフレーム間で対応付けを最適化するハンガリー法\cite{kuhn1955hungarian}と，対応付けに予測位置を利用するためのカルマンフィルタ\cite{bishop2001introduction}で構成されている．
 
 よって以降の節では，YOLOとSORTを組み合わせたTracking-by-Detectionの全体の概要を述べた後（\ref{subsec:yolo_and_sort}項），物体検出手法のYOLO（\ref{subsec:object_detection}項）と追跡手法のSORTの概要（\ref{subsec:abstract_of_sort}項）を述べる．またSORTを構成するハンガリー法による割当問題（\ref{subsec:hungarian_algorithm}項）とカルマンフィルタ（\ref{subsec:kalman_filter}項）について述べる．これらの要素技術は後述の提案手法（\ref{sec:proposed_method}節）でも利用されるため，詳細に説明を述べている．そしてそのあとにSORTのアルゴリズムを詳細に述べる（\ref{subsec:sort_algorithm}項）．また最後には，この既存手法を本問題設定に適用するうえで生じる問題について議論する（\ref{subsec:existing_problem}項）．
 
@@ -454,7 +454,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
 
     新たに設計を行うカルマンフィルタでは，異なるスライスに対応した複数のバウンディングボックスを観測変数として，三次元的な状態の推定を行う（図\ref{fig:proposed_pipeline}の(3) State Estimation）．このカルマンフィルタをSliceKalmanFilterと呼ぶこととする．この設計では，非線形な写像に対応するための拡張カルマンフィルタと，新たに提案する可変的な観測変数を利用する．
 
-    最後に，\ref{sec:setting}節で説明した出力（式\ref{eq:cell_state_prediction}および式\ref{eq:cell_initial_state_prediction}）を得る方法について説明する．まず式\ref{eq:cell_state_prediction}で表される時刻$t+1$の予測は，カルマンフィルタの状態推定における状態予測値（アルゴリズム\ref{alg:kalman_estimate}の3行目）によって得られる．ただしここで用いられるカルマンフィルタは，三次元的な状態変数を持つSliceKalmanFilterである．また式\ref{eq:cell_initial_state_prediction}で表される初期時刻の状態推定値には，単純に各物体が追跡され始めた時刻$t_{\text{init}}$における状態推定値$\hat{\bm{s}}_{t_{\text{init}}}$を用いる．
+    最後に，\ref{sec:setting_fomulization}節で説明した出力（式\ref{eq:cell_state_prediction}および式\ref{eq:cell_initial_state_prediction}）を得る方法について説明する．まず式\ref{eq:cell_state_prediction}で表される時刻$t+1$の予測は，カルマンフィルタの状態推定における状態予測値（アルゴリズム\ref{alg:kalman_estimate}の3行目）によって得られる．ただしここで用いられるカルマンフィルタは，三次元的な状態変数を持つSliceKalmanFilterである．また式\ref{eq:cell_initial_state_prediction}で表される初期時刻の状態推定値には，単純に各物体が追跡され始めた時刻$t_{\text{init}}$における状態推定値$\hat{\bm{s}}_{t_{\text{init}}}$を用いる．
 
     \subsection{複数スライスに対応したカルマンフィルタ}
     \label{subsec:sliced_kalman_filter}
@@ -478,7 +478,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
         \label{eq:single_slice_observation}
         \bm{o}_{t, s} = \left[x_s, y_s, w_s, h_s\right]^{\top}
     \end{equation}
-    と表される．ここで\ref{sec:setting}節および式\ref{eq:appearant_radius}，\ref{eq:circle_region}で説明をした共焦点顕微鏡から得られる二次元画像の特性を考慮すると，状態変数$\bm{s}_t$を入力して同時刻のスライス$s$に対する観測変数$\bm{o}_{t,s}$を返す関数$h_s(\cdot)$は，
+    と表される．ここで\ref{sec:setting_fomulization}節および式\ref{eq:appearant_radius}，\ref{eq:circle_region}で説明をした共焦点顕微鏡から得られる二次元画像の特性を考慮すると，状態変数$\bm{s}_t$を入力して同時刻のスライス$s$に対する観測変数$\bm{o}_{t,s}$を返す関数$h_s(\cdot)$は，
     \begin{equation}
         \label{eq:single_slice_observation_map}
         \begin{gathered}
@@ -495,7 +495,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             \\ \textbf{where } r_t^{\text{app}} = \sqrt{r_t^2 - \left\{(s - 1)\delta z - \left(z_t + \dot{z}_t (s - 1) t_c\right) \right\}^2}
         \end{gathered}
     \end{equation}
-    で表される．ただし$t_c, \delta z$は\ref{sec:setting}節で説明した，それぞれ共焦点顕微鏡から一枚の二次元画像を得るのに要する時間と各スライスの間隔の大きさを表している．また$r_t^{\text{app}}$は，スライス$s$に状態変数が$\bm{s}_t$である物体が映る際の見かけの半径を表している（ただしここでは，平面の高さを表す$z$を省略している）．
+    で表される．ただし$t_c, \delta z$は\ref{sec:setting_fomulization}節で説明した，それぞれ共焦点顕微鏡から一枚の二次元画像を得るのに要する時間と各スライスの間隔の大きさを表している．また$r_t^{\text{app}}$は，スライス$s$に状態変数が$\bm{s}_t$である物体が映る際の見かけの半径を表している（ただしここでは，平面の高さを表す$z$を省略している）．
 
     この式の注意すべき点は二つある．一つ目は，この観測変数と状態変数の関係が非線形な関係にあることである．式\ref{eq:kalman_GL}で仮定したように，一般的なカルマンフィルタではこの両者の関係に線形性を仮定していたため，何かしらの拡張が必要である．よって提案手法では，拡張カルマンフィルタ\cite{bishop2001introduction}を利用する．また注意すべき二つ目の点は，式\ref{eq:single_slice_observation_map}において，見かけの半径$r_t^{\text{app}}$の右辺の中身が$0$より大きくなければ，そもそも観測変数$\bm{o}_{t,s}$が存在し得ないことである．これについては，拡張カルマンフィルタの説明のあとに詳細を述べる．
 
@@ -597,7 +597,7 @@ YOLO（You Only Look Once）\cite{redmon2016you, alif2024yolov1}は，検出を�
             さらにSliceKalmanFilterの初期化は，推定の安定を図るために二時刻連続で行う．物体がある時刻で生成されるとき，各高さの画像が取得されるタイミングによっては，図\ref{fig:bad_initialize}のように取得されるバウンディングボックスの情報が不十分になる．これにより，式\ref{eq:SKF_kalman_initialize}において$z$および$r$の推定精度が低くなる．よって十分なバウンディングボックスを利用した推定を行うために，生成された後二時刻分は式\ref{eq:SKF_kalman_initialize}による初期化を行う．
 
     \subsection{複数スライスに対応したReID}
-    \label{subsec:re-identificataion_for_slice}
+    \label{subsec:reidentificataion_for_slice}
 
     \begin{figure}[t]
         \centering
