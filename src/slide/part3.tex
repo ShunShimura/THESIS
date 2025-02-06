@@ -1,5 +1,56 @@
-\section{Proposal Method}
+\section{提案手法}
 
-\begin{frame}{}
-
+\begin{frame}[noframenumbering]{既存技術：Multi Object Tracking}
+    \begin{itemize}
+        \item 口頭
+        \begin{itemize}
+            \item 複数物体を追跡するフレームワーク，自動車や歩行者など
+            \item 画像を入力したら，検出して，IDを振っていくことで達成する
+            \item これを本問題に適用するには，単一の平面をそれぞれ，独立に処理する方法がある
+            \item しかしそれでは，縦に動く細胞が途切れたり，三次元位置の予測精度に影響が出る
+            \item 提案手法へ
+        \end{itemize}
+        \item 図：通常のMOT，下側に途切れたり精度が悪くなる図（可能であれば）
+        \\\ra 適用の仕方がマストかも？？
+    \end{itemize}
 \end{frame}
+\begin{frame}{既存技術：Multi Object Tracking}
+    \myfigure{slide/slide5.pdf}
+\end{frame}
+
+\begin{frame}[noframenumbering]{既存技術の適用上生じる課題}
+    \begin{itemize}
+        \item 口頭
+        \begin{itemize}
+            \item 
+        \end{itemize}
+        \item 図
+    \end{itemize}
+\end{frame}
+
+
+\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
+    \begin{itemize}
+        \item 口頭：
+        \begin{itemize}
+            \item スライスを跨いだIDを割り振る
+            \item 縦向きの動きに追従することができる，推定のもと
+        \end{itemize}
+        \item 図：跨いだReIDの図（全スライドと対応するように）
+        \item 図：深さ方向に追跡を行うことで，どれが同じ個体由来であるかを知ることができる
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[noframenumbering]{提案手法2：三次元位置の状態予測}
+    \begin{itemize}
+        \item 口頭：
+        \begin{itemize}
+            \item 次に，スライスを跨いだ複数のバウンディングボックスから推定をする
+            \item カルマンフィルタによって行う
+            \item 貢献として，EKFと可変的な観測変数を用いていることもいう
+            \item or カルマンフィルタの導入から話す
+        \end{itemize}
+        \item 図：行っていることを図示化？
+    \end{itemize}
+\end{frame}
+

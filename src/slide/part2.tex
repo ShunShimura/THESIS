@@ -1,5 +1,48 @@
-\section{Existing Method}
+\section{問題設定}
 
-\begin{frame}{}
+\begin{frame}[noframenumbering]{AIシステムによるリアルタイム細胞追跡}
+    \begin{itemize}
+        \item 口頭
+        \begin{itemize}
+            \item 前述のロボットによる自動分取，位置情報の保存をするために追跡
+            \item 図のように，各細胞がどこにいるのかを画像から認識
+            \item 最新の位置をロボットに送り，最初の位置が空間的な情報
+        \end{itemize}
+        \item 図：オンライン処理，最初と最新の位置に赤丸，ここでは単一画像
+    \end{itemize}
+\end{frame}
+\begin{frame}{AIシステムによるリアルタイム細胞追跡}
+    \myfigure{slide/slide3.pdf}
+\end{frame}
 
+\begin{frame}[noframenumbering]{共焦点顕微鏡から得られる四次元データ}
+    \begin{itemize}
+        \item 口頭
+        \begin{itemize}
+            \item 入力画像について詳しく
+            \item 三次元空間を取りたい（すべての細胞，縦向きの動き）
+            \item 光学的な断面像を取れる共焦点顕微鏡を使う
+            \item 順番に高さを変えながら，設定したところまでいったら戻る，を繰り返す
+            \item 二次元+高さ+時間の四次元データが得られる
+            \item 二つの分解能を上げれば，簡単に目的を達成できる
+            \item しかし，有限の時間がかかってしまう
+        \end{itemize}
+        \item 図：得られる画像の時系列，時間の数値を書く
+    \end{itemize}
+\end{frame}
+\begin{frame}{共焦点顕微鏡から得られる四次元データ}
+    \myfigure{slide/slide4.pdf}
+\end{frame}
+
+\begin{frame}[noframenumbering]{細胞分取のための三次元位置予測}
+    \begin{itemize}
+        \item 口頭
+        \begin{itemize}
+            \item 共焦点顕微鏡入力では，時間的，空間的に疎になる
+            \item 細胞の動きがあったり，スライスに完全に映らなかったり
+            \item 分取するためには，この情報を復元かつ予測しなければならない
+            \item 結論として，追跡しながら高精度な三次元位置の推定が必要，これが出力
+        \end{itemize}
+        \item 図：二点目を表す図
+    \end{itemize}
 \end{frame}

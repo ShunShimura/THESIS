@@ -41,6 +41,7 @@
         % \begin{flushright}
         \Large
         \insertauthor
+        \vspace{10pt}
         \\{\small \insertinstitute}
         % \end{flushright}
         % \quad -- \; 
@@ -147,7 +148,7 @@
 \newcommand{\black}[1]{\textcolor{black}{#1}}
 \newcommand{\argmax}{\mathop{\rm arg~max}\limits}
 \newcommand{\argmin}{\mathop{\rm arg~min}\limits}
-\newcommand{\myfigure}[2][0.5]{\begin{figure}[h]\center\includegraphics[scale=#1]{fig/#2}\end{figure}}
+\newcommand{\myfigure}[2][1.0]{\begin{figure}[h]\center\includegraphics[width=#1\linewidth]{fig/#2}\end{figure}}
 \newcommand{\mycapfigure}[3]{\begin{figure}[h]\center\includegraphics[scale=#1]{#2}\caption{#3}\end{figure}}
 \newcommand{\vs}{\vspace{10pt}}
 \newcommand{\cl}{:\ }
