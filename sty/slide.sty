@@ -10,6 +10,7 @@
 \tcbuselibrary{skins} % tcolorboxでenhancedを利用
 
 %%% design %%%
+\definecolor{skyblue}{RGB}{6,176,240}
 \definecolor{beamer@shimura}{RGB}{0, 110, 79}
 \setbeamercolor{structure}{fg=black}
 \setbeamertemplate{navigation symbols}{}%ナビゲーションシンボルを非表示に
@@ -17,9 +18,9 @@
 \setbeamercolor{itemize item}{fg=beamer@shimura}
 \setbeamercolor{itemize subitem}{fg=beamer@shimura}
 \setbeamercolor{itemize subsubitem}{fg=beamer@shimura}
-\setbeamertemplate{itemize item}[circle]
+\setbeamertemplate{itemize item}{\checkmark}
 \setbeamertemplate{itemize subitem}[triangle]
-\setbeamertemplate{itemize subsubitem}{--}
+\setbeamertemplate{itemize subsubitem}{$\bullet$}
 
 %%% Title page の変更 %%%
 \setbeamertemplate{title page}{%
@@ -144,12 +145,13 @@
 %%% newcommand/environment %%%
 \newcommand{\red}[1]{\textcolor{red}{#1}}
 \newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\newcommand{\skyblue}[1]{\textcolor{skyblue}{#1}}
 \newcommand{\green}[1]{\textcolor{green}{#1}}
 \newcommand{\black}[1]{\textcolor{black}{#1}}
 \newcommand{\argmax}{\mathop{\rm arg~max}\limits}
 \newcommand{\argmin}{\mathop{\rm arg~min}\limits}
-\newcommand{\myfigure}[2][1.0]{\begin{figure}[h]\center\includegraphics[width=#1\linewidth]{fig/#2}\end{figure}}
-\newcommand{\mycapfigure}[3]{\begin{figure}[h]\center\includegraphics[scale=#1]{#2}\caption{#3}\end{figure}}
+\newcommand{\myfigure}[2][1.0]{\begin{figure}[h]\centering\includegraphics[width=#1\linewidth]{fig/#2}\end{figure}}
+\newcommand{\mycapfigure}[3][1.0]{\begin{figure}[h]\centering\includegraphics[width=#1\linewidth]{fig/#2}\caption{#3}\end{figure}}
 \newcommand{\vs}{\vspace{10pt}}
 \newcommand{\cl}{:\ }
 \newcommand{\ra}{$\rightarrow$\ }

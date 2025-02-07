@@ -1,23 +1,49 @@
 \section{研究背景}
 
-\begin{frame}[noframenumbering]{植物の再生メカニズムの解明}
-    \begin{itemize}
-        \item 口頭：再生力の強さ，社会的貢献，scRNA-seqの目的
-        \item 図：どこの細胞がどのような働きをしたのか（ナズナの論文引用？）
-        \item つなぎ：部分的であり，一細胞レベル分解能はまだ
-    \end{itemize}
-\end{frame}
+% \begin{frame}[noframenumbering]{植物の再生メカニズムの解明}
+%     \begin{itemize}
+%         \item 口頭：再生力の強さ，社会的貢献，scRNA-seqの目的
+%         \item 図：どこの細胞がどのような働きをしたのか（ナズナの論文引用？）
+%         \item つなぎ：部分的であり，一細胞レベル分解能はまだ
+%     \end{itemize}
+% \end{frame}
 \begin{frame}{植物の再生メカニズムの解明}
-    \myfigure{slide/slide1.pdf}
+    \begin{itemize}
+        \item 植物のリプログラミング：たった一つの細胞からでも個体にまで再生
+        \\\ra scRNA-seq：\red{どこの}細胞が，\red{どのような}働きをしたのかを解析
+    \end{itemize}
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.7\linewidth]{fig/slide/slide1.pdf}
+        \caption{シロイヌナズナのscRNA-seq結果（\cite{shahan2022single}より引用）}
+    \end{figure}
+    \Ra いまだ，\red{一細胞レベルの空間分解能}をもったscRNA-seqは行われていない
 \end{frame}
 
-\begin{frame}[noframenumbering]{位置情報付き一細胞分取システム}
-    \begin{itemize}
-        \item 口頭：システムの構築，一細胞ごと収集，統計的推定のために自動化，保持する
-        \item 図：画像，AIシステム，ロボット，遊離，コマ送りでAI
-        \item 貢献も述べる？？
-    \end{itemize}
-\end{frame}
+% \begin{frame}[noframenumbering]{位置情報付き一細胞分取システム}
+%     \begin{itemize}
+%         \item 口頭：システムの構築，一細胞ごと収集，統計的推定のために自動化，保持する
+%         \item 図：画像，AIシステム，ロボット，遊離，コマ送りでAI
+%         \item 貢献も述べる？？
+%     \end{itemize}
+% \end{frame}
 \begin{frame}{位置情報付き一細胞分取システム}
-    \myfigure{slide/slide2.pdf}
+    \begin{block}{システムの利点}
+        \begin{itemize}
+            \item AIとロボットにより，細胞分取を自動化 \Ra 統計的検出力の確保
+            \item 各細胞の元住所を保持したまま細胞を分取 \Ra \red{一細胞レベルの空間分解能}
+        \end{itemize}
+    \end{block}
+    \vspace{-1zh}
+    \myfigure[0.8]{slide/slide2-1.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{位置情報付き一細胞分取システム}
+    \begin{block}{システムの利点}
+        \begin{itemize}
+            \item AIとロボットにより，細胞分取を自動化 \Ra 統計的検出力の確保
+            \item 各細胞の元住所を保持したまま細胞を分取 \Ra \red{一細胞レベルの空間分解能}
+        \end{itemize}
+    \end{block}
+    \vspace{-1zh}
+    \myfigure[0.8]{slide/slide2-2.pdf}
 \end{frame}
