@@ -5,7 +5,39 @@
 \end{frame}
 
 \begin{frame}{検証用データによる状態予測評価}
-    
+    \begin{itemize}
+        \item 検証用データを用いて，\red{三次元位置の予測精度}を評価
+    \end{itemize}
+    \vspace{0.5zh}
+    \uline{評価（1）　予測位置および正解位置の可視化}
+    \begin{columns}
+        \begin{column}{.6\linewidth}
+            % \begin{figure}
+            %     \animategraphics[autoplay, loop, width=\linewidth]{20}{fig/slide/3d_spheres/t}{001}{060}
+            % \end{figure}              
+            \myfigure[.8]{slide/3d_spheres/t030.pdf}
+        \end{column}
+        \begin{column}{.4\linewidth}
+            \begin{itemize}
+                \item[$\blacktriangleright$] 左側（\red{赤}）が予測された位置
+                \item[$\blacktriangleright$] 右側（\blue{青}）が正解の位置
+            \end{itemize}
+        \end{column}
+    \end{columns}
+    \uline{評価（2）　予測精度の定量化}
+    \begin{columns}
+        \begin{column}{.6\linewidth}
+            \myfigure[0.9]{slide/11.pdf}
+        \end{column}
+        \begin{column}{.4\linewidth}
+            \vspace{-2.5zh}
+            \begin{itemize}
+                \item[$\blacktriangleright$] 横軸は時刻を表すステップ
+                \item[$\blacktriangleright$] 予測と正解の\uline{IoU}を計算
+                \item[$\blacktriangleright$] 常にほとんど$1.0$（\red{good}）
+            \end{itemize}
+        \end{column}
+    \end{columns}
 \end{frame}
 
 \begin{frame}{遊離した細胞の自動分取}
