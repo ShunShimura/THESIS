@@ -1,90 +1,84 @@
 \section{問題設定}
 
-% \begin{frame}[noframenumbering]{AIシステムによるリアルタイム細胞追跡}
-%     \begin{itemize}
-%         \item 口頭
-%         \begin{itemize}
-%             \item 前述のロボットによる自動分取，位置情報の保存をするために追跡
-%             \item 図のように，各細胞がどこにいるのかを画像から認識
-%             \item 最新の位置をロボットに送り，最初の位置が空間的な情報
-%         \end{itemize}
-%         \item 図：オンライン処理，最初と最新の位置に赤丸，ここでは単一画像
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{AIシステムによるリアルタイム細胞追跡}
-    \begin{itemize}
-        \item AIシステム：すべての細胞をリアルタイム追跡
-        \\\ra \red{\dotuline{\black{初期位置}}}を保持しながら\red{\uline{\black{最新位置}}}をロボットに送信
-    \end{itemize}
-    \myfigure{slide/slide3.pdf}
+\begin{frame}[noframenumbering]{目次}
+    \tableofcontents[currentsection]
 \end{frame}
 
-% \begin{frame}[noframenumbering]{共焦点顕微鏡から得られる四次元データ}
-%     \begin{itemize}
-%         \item 口頭
-%         \begin{itemize}
-%             \item 入力画像について詳しく
-%             \item 三次元空間を取りたい（すべての細胞，縦向きの動き）
-%             \item 光学的な断面像を取れる共焦点顕微鏡を使う
-%             \item 順番に高さを変えながら，設定したところまでいったら戻る，を繰り返す
-%             \item 二次元+高さ+時間の四次元データが得られる
-%             \item 二つの分解能を上げれば，簡単に目的を達成できる
-%             \item しかし，有限の時間がかかってしまう
-%         \end{itemize}
-%         \item 図：得られる画像の時系列，時間の数値を書く
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{共焦点顕微鏡から得られる四次元データ}
+\begin{frame}{AIシステムによるリアルタイム複数細胞追跡}
     \begin{itemize}
-        \item 細胞は三次元空間を遊離する（$\because$ 酵素溶液処理）
-        \item リアルタイムに細胞を分取したい（$\because$ 細胞が移動する）
+        \item AIシステム：\red{すべての細胞をリアルタイム追跡}
+        \\\ra \red{\dotuline{\black{元住所}}}を保持しながら\red{\uline{\black{最新位置}}}をロボットに送信
     \end{itemize}
-    \ra 共焦点顕微鏡によって，\red{スライスした複数の二次元画像}で三次元空間を認識
-    \\\phantom{\ra しかしながらこの共焦点画像の取得には，\blue{1秒/1枚かかる}}
+    \myfigure{slide/slide3-0.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{AIシステムによるリアルタイム複数細胞追跡}
+    \begin{itemize}
+        \item AIシステム：\red{すべての細胞をリアルタイム追跡}
+        \\\ra \red{\dotuline{\black{元住所}}}を保持しながら\red{\uline{\black{最新位置}}}をロボットに送信
+    \end{itemize}
+    \myfigure{slide/slide3-1.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{AIシステムによるリアルタイム複数細胞追跡}
+    \begin{itemize}
+        \item AIシステム：\red{すべての細胞をリアルタイム追跡}
+        \\\ra \red{\dotuline{\black{元住所}}}を保持しながら\red{\uline{\black{最新位置}}}をロボットに送信
+    \end{itemize}
+    \myfigure{slide/slide3-2.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{AIシステムによるリアルタイム複数細胞追跡}
+    \begin{itemize}
+        \item AIシステム：\red{すべての細胞をリアルタイム追跡}
+        \\\ra \red{\dotuline{\black{元住所}}}を保持しながら\red{\uline{\black{最新位置}}}をロボットに送信
+    \end{itemize}
+    \myfigure{slide/slide3-3.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{AIシステムによるリアルタイム複数細胞追跡}
+    \begin{itemize}
+        \item AIシステム：\red{すべての細胞をリアルタイム追跡}
+        \\\ra \red{\dotuline{\black{元住所}}}を保持しながら\red{\uline{\black{最新位置}}}をロボットに送信
+    \end{itemize}
+    \myfigure{slide/slide3-4.pdf}
+\end{frame}
+
+\begin{frame}{共焦点顕微鏡から得られる4Dデータ}
+    \begin{itemize}
+        \item 時系列データが必要（$\because$ 移動する細胞を取得する）
+        \item 三次元データが必要（$\because$ 酵素溶液処理により流体に満たされている）
+    \end{itemize}
+    \ra 共焦点顕微鏡により，\red{複数の高さでスライスした二次元画像の時系列データ}を取得
+    \\\phantom{\ra \blue{\textbf{Challenging}}：画像の取得に，\blue{1秒/1枚}かかる}
     \myfigure{slide/slide4-1.pdf}
 \end{frame}
-\begin{frame}[noframenumbering]{共焦点顕微鏡から得られる四次元データ}
+\begin{frame}[noframenumbering]{共焦点顕微鏡から得られる4Dデータ}
     \begin{itemize}
-        \item 細胞は三次元空間を遊離する（$\because$ 酵素溶液処理）
-        \item リアルタイムに細胞を分取したい（$\because$ 細胞が移動する）
+        \item 時系列データが必要（$\because$ 移動する細胞を取得する）
+        \item 三次元データが必要（$\because$ 酵素溶液処理により流体に満たされている）
     \end{itemize}
-    \ra 共焦点顕微鏡によって，\red{スライスした複数の二次元画像}で三次元空間を認識
-    \\\ra しかしながらこの共焦点画像の取得には，\blue{1秒/1枚かかる}
+    \ra 共焦点顕微鏡により，\red{複数の高さでスライスした二次元画像の時系列データ}を取得
+    \\\ra \blue{\textbf{Challenging}}：画像の取得に，\blue{1秒/1枚}かかる
     \myfigure{slide/slide4-2.pdf}
 \end{frame}
 
-% \begin{frame}[noframenumbering]{細胞分取のための三次元位置予測}
-%     \begin{itemize}
-%         \item 口頭
-%         \begin{itemize}
-%             \item 共焦点顕微鏡入力では，時間的，空間的に疎になる
-%             \item 細胞の動きがあったり，スライスに完全に映らなかったり
-%             \item 分取するためには，この情報を復元かつ予測しなければならない
-%             \item 結論として，追跡しながら高精度な三次元位置の推定が必要，これが出力
-%         \end{itemize}
-%         \item 図：二点目を表す図
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{AIシステムによる細胞位置の予測}
+\begin{frame}{AIシステムによる見えない細胞の位置予測}
     \begin{itemize}
-        \item \uline{空間分解能の必要性}
+        \item 高い時間分解能が必要
         \begin{itemize}
-            \item ロボットによる取得のために，高精度に位置を予測したい
-            \item 高さを推定するには，細かいスライス間隔が必要
+            \item 動く細胞を追従して細胞を追跡しなければならない
+            \item 元住所を保持するために，FPSは上げておきたい
         \end{itemize}
-        \vspace{0.5zh}
-        \item \uline{時間分解能の必要性}
+        \vs
+        \item 高い空間分解能が必要
         \begin{itemize}
-            \item すべてのスライスを同時に確認できない
-            \item 動く細胞を追従しなければならない
+            \item ロボットによる取得のために，高精度に位置を知りたい
+            \item できる限りすべての細胞を見逃したくない
         \end{itemize}
     \end{itemize}
+    \Ra トレードオフにより，\red{見えていない細胞を取りに行く必要}が生じる
     \vs
-    \begin{block}{AIシステムのタスク}
-        \begin{itemize}
-            \item 入力：時間方向および高さ方向に疎な画像時系列データ
-            \item 処理：逐次的にすべての遊離する細胞を追跡
-            \item 出力：一定時間後の細胞の位置予測
-        \end{itemize}
+    \begin{block}{AIシステムの有効性}
+        \begin{enumerate}
+            \item 時間的・空間的に疎なデータから，\red{追跡および高精度な位置予測}を行う
+            \item 上記の処理を\red{高速}に行う
+        \end{enumerate}
     \end{block}
 \end{frame}

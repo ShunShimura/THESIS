@@ -1,302 +1,206 @@
 \section{提案手法}
 
-% \begin{frame}[noframenumbering]{既存技術：Multi Object Tracking}
-%     \begin{itemize}
-%         \item 口頭
-%         \begin{itemize}
-%             \item 複数物体を追跡するフレームワーク，自動車や歩行者など
-%             \item 画像を入力したら，検出して，IDを振っていくことで達成する
-%         \end{itemize}
-%         \item 図：通常のMOT，下側に途切れたり精度が悪くなる図（可能であれば）
-%         \\\ra 適用の仕方がマストかも？？
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{既存技術：Multi Object Tracking}
-    \begin{block}{Tracking-by-Detection}
-        \begin{enumerate}
-            \item 各時刻の画像において，画像内に映る物体を検出
-            \item 検出された各情報に対して，個体を識別するためのIDを割り振り
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide5-1.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{既存技術：Multi Object Tracking}
-    \begin{block}{Tracking-by-Detection}
-        \begin{enumerate}
-            \item 各時刻の画像において，画像内に映る物体を検出
-            \item 検出された各情報に対して，個体を識別するためのIDを割り振り
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide5-2.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{既存技術：Multi Object Tracking}
-    \begin{block}{Tracking-by-Detection}
-        \begin{enumerate}
-            \item 各時刻の画像において，画像内に映る物体を検出
-            \item 検出された各情報に対して，個体を識別するためのIDを割り振り
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide5-3.pdf}
+\begin{frame}[noframenumbering]{目次}
+    \tableofcontents[currentsection]
 \end{frame}
 
-% \begin{frame}[noframenumbering]{既存技術の適用上生じる課題}
-%     \begin{itemize}
-%         \item 口頭
-%         \begin{itemize}
-%             \item これを本問題に適用するには，単一の平面をそれぞれ，独立に処理する方法がある
-%             \item しかしそれでは，縦に動く細胞が途切れたり，三次元位置の予測精度に影響が出る
-%             \item 以下，blockで問題点
-%             \item 縦方向に動く細胞の追跡が途切れる
-%             \item 三次元推定の精度保証が自明でない
-%         \end{itemize}
-%         \item 図：適用方法
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{既存技術の適用上生じる課題}
-    \begin{itemize}
-        \item 既存技術（Tracking-by-Detection,\ TBD）を本研究に適用するためには？
-        \\\ra 各高さ（スライス）ごとに，独立した別系列データとして，TBDに入力
-    \end{itemize}
-    \myfigure[0.8]{slide/slide6-1.pdf}
-    \vs
-    \phantom{しかしながら，本研究においてはいくつか問題点}
-    \begin{enumerate}
-        \item[\phantom{}] \phantom{\uline{元住所の特定}}
-        \\\phantom{\ra 細胞が高さ方向に運動すると，追跡が途切れる}
-        \item[\phantom{}] \phantom{\uline{三次元位置の推定および予測}}
-        \\\phantom{\ra スライスを限定してるため，三次元的な情報が欠けている}
-    \end{enumerate}
-\end{frame}
-\begin{frame}{既存技術の適用上生じる課題}
-    \begin{itemize}
-        \item 既存技術（Tracking-by-Detection,\ TBD）を本研究に適用するためには？
-        \\\ra 各高さ（スライス）ごとに，独立した別系列データとして，TBDに入力
-    \end{itemize}
-    \myfigure[0.8]{slide/slide6-2.pdf}
-    \phantom{しかしながら，本研究においてはいくつか問題点}
-    \vs
-    \begin{enumerate}
-        \item[\phantom{}] \phantom{\uline{元住所の特定}}
-        \\\phantom{\ra 細胞が高さ方向に運動すると，追跡が途切れる}
-        \item[\phantom{}] \phantom{\uline{三次元位置の推定および予測}}
-        \\\phantom{\ra スライスを限定してるため，三次元的な情報が欠けている}
-    \end{enumerate}
-\end{frame}
-\begin{frame}{既存技術の適用上生じる課題}
-    \begin{itemize}
-        \item 既存技術（Tracking-by-Detection,\ TBD）を本研究に適用するためには？
-        \\\ra 各高さ（スライス）ごとに，独立した別系列データとして，TBDに入力
-    \end{itemize}
-    \myfigure[0.8]{slide/slide6-3.pdf}
-    \phantom{しかしながら，本研究においてはいくつか問題点}
-    \vs
-    \begin{enumerate}
-        \item[\phantom{}] \phantom{\uline{元住所の特定}}
-        \\\phantom{\ra 細胞が高さ方向に運動すると，追跡が途切れる}
-        \item[\phantom{}] \phantom{\uline{三次元位置の推定および予測}}
-        \\\phantom{\ra スライスを限定してるため，三次元的な情報が欠けている}
-    \end{enumerate}
-\end{frame}
-\begin{frame}{既存技術の適用上生じる課題}
-    \begin{itemize}
-        \item 既存技術（Tracking-by-Detection,\ TBD）を本研究に適用するためには？
-        \\\ra 各高さ（スライス）ごとに，独立した別系列データとして，TBDに入力
-    \end{itemize}
-    \myfigure[0.8]{slide/slide6-3.pdf}
-    \vs
-    しかしながら，本研究においてはいくつか問題点
-    \begin{enumerate}
-        \item \uline{元住所の特定}
-        \\\ra 細胞が高さ方向に運動すると，追跡が途切れる
-        \item \uline{三次元位置の推定および予測}
-        \\\ra スライスを限定してるため，三次元的な情報が欠けている
-    \end{enumerate}
-\end{frame}
-
-% \begin{frame}[noframenumbering]{提案手法の概要}
-%     \begin{itemize}
-%         \item 口頭
-%         \begin{itemize}
-%             \item 三段階で構成
-%             \item 物体検出，IDを割り振り，カルマンフィルタで予測する
-%             \item DepthSORTとSKFを提案する
-%         \end{itemize}
-%         \item 図：ReIDを変更予定
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{提案手法の概要}
-    \small
-    \begin{block}{Overview of Proposed Method}
-        \begin{enumerate}
-            \item 物体検出：各画像を検出器に入力して物体の位置を捕捉（既存技術と同様）
-            \item IDの割り振り：各検出情報に\red{スライスを跨いで}IDを割り振り
-            \\\ra \textbf{\red{Depth-SORT}}によって実現
-            \item 位置推定・予測：カルマンフィルタによって各細胞の三次元位置を推定・予測
-            \\\ra \textbf{\red{Slice Kalman filter}}によって実現
-        \end{enumerate}
-    \end{block}
-    \myfigure[0.7]{slide/slide7.pdf}
-\end{frame}
-
-% \begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-%     \begin{itemize}
-%         \item 口頭：
-%         \begin{itemize}
-%             \item スライスを跨いだIDを割り振る
-%             \item 縦向きの動きに追従することができる，推定のもと
-%         \end{itemize}
-%         \item 図：跨いだReIDの図（全スライドと対応するように）
-%         \item 図：深さ方向に追跡を行うことで，どれが同じ個体由来であるかを知ることができる
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide8-1.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}    
-    \myfigure{slide/slide8-2.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}    
-    \myfigure{slide/slide8-1.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide8-3.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide8-1.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide8-4.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide8-5.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide8-6.pdf}
-\end{frame}
-\begin{frame}[noframenumbering]{提案手法1：スライスを跨いだIDの割り振り}
-    \begin{block}{Alogrithm of ID Assignment}
-        \begin{enumerate}
-            \item 検出された各情報を，由来する個体ごとに仕分ける（by \textbf{\red{Depth-SORT}}）
-            \item 仕分けられた検出情報と，いままでの軌跡を比較 
-            \\\ra 同一個体由来のものにIDを付与 or 新しい物体には新しいID
-        \end{enumerate}
-    \end{block}
-    \myfigure{slide/slide8-7.pdf}
-\end{frame}
-
-% \begin{frame}[noframenumbering]{提案手法2：三次元位置の状態予測}
-%     \begin{itemize}
-%         \item 口頭：
-%         \begin{itemize}
-%             \item 次に，スライスを跨いだ複数のバウンディングボックスから推定をする
-%             \item カルマンフィルタによって行う
-%             \item 貢献として，EKFと可変的な観測変数を用いていることもいう
-%             \item or カルマンフィルタの導入から話す
-%         \end{itemize}
-%         \item 図：行っていることを図示化？
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{提案手法2：三次元位置の状態予測}
+\begin{frame}{カルマンフィルタによる三次元的な位置予測}
     \begin{itemize}
         \item \uline{カルマンフィルタ}
         \begin{itemize}
-            \item センサーから得られる情報（\skyblue{観測変数}）から，システム内部（\red{状態変数}）を推定
-            \item ある時刻までの情報から，それ以降の状態も予測可能
+            \item センサー情報（\skyblue{観測変数}）からシステム内部情報（\red{状態変数}）を推定
+            \item ある時刻までの観測情報から，それ以降の状態を予測することも可能
         \end{itemize}
-    \end{itemize}
-    \begin{itemize}
         \item[\phantom{}] \phantom{新たに，\red{\textbf{Slice Kalman Filter}}を設計}
         \begin{itemize}
-            \item[\phantom{}] \phantom{拡張カルマンフィルタ：非線形な関係の扱いを可能に}
-            \item[\phantom{}] \phantom{可変的な観測変数：毎時刻に変化する観測変数の次元数に対応}
+            \item[\phantom{}] \phantom{拡張カルマンフィルタ：非線形な関係の扱いを可能に（omitted）}
+            \item[\phantom{}] \phantom{可変的な観測変数：毎時刻変化する観測の次元数に対応（omitted）}
         \end{itemize}
-    \end{itemize} 
-    \myfigure{slide/slide9-1.pdf}
+        \myfigure{slide/5-1.pdf}
+    \end{itemize}
 \end{frame}
-\begin{frame}[noframenumbering]{提案手法2：三次元位置の状態予測}
+\begin{frame}[noframenumbering]{カルマンフィルタによる三次元的な位置予測}
     \begin{itemize}
         \item \uline{カルマンフィルタ}
         \begin{itemize}
-            \item センサーから得られる情報（\skyblue{観測変数}）から，システム内部（\red{状態変数}）を推定
-            \item ある時刻までの情報から，それ以降の状態も予測可能
+            \item センサー情報（\skyblue{観測変数}）からシステム内部情報（\red{状態変数}）を推定
+            \item ある時刻までの観測情報から，それ以降の状態を予測することも可能
         \end{itemize}
-    \end{itemize}   
-    \begin{itemize}
         \item 新たに，\red{\textbf{Slice Kalman Filter}}を設計
         \begin{itemize}
-            \item 拡張カルマンフィルタ：非線形な関係の扱いを可能に
-            \item 可変的な観測変数：毎時刻に変化する観測変数の次元数に対応
+            \item 拡張カルマンフィルタ：非線形な関係の扱いを可能に（omitted）
+            \item 可変的な観測変数：毎時刻変化する観測の次元数に対応（omitted）
         \end{itemize}
-    \end{itemize} 
-    \myfigure{slide/slide9-2.pdf}
+        \myfigure{slide/5-2.pdf}
+    \end{itemize}
+\end{frame}
+\begin{frame}[noframenumbering]{カルマンフィルタによる三次元的な位置予測}
+    \begin{itemize}
+        \item \uline{カルマンフィルタ}
+        \begin{itemize}
+            \item センサー情報（\skyblue{観測変数}）からシステム内部情報（\red{状態変数}）を推定
+            \item ある時刻までの観測情報から，それ以降の状態を予測することも可能
+        \end{itemize}
+        \item 新たに，\red{\textbf{Slice Kalman Filter}}を設計
+        \begin{itemize}
+            \item 拡張カルマンフィルタ：非線形な関係の扱いを可能に（omitted）
+            \item 可変的な観測変数：毎時刻変化する観測の次元数に対応（omitted）
+        \end{itemize}
+        \myfigure{slide/5-3.pdf}
+    \end{itemize}
+\end{frame}
+\begin{frame}[noframenumbering]{カルマンフィルタによる三次元的な位置予測}
+    \begin{itemize}
+        \item \uline{カルマンフィルタ}
+        \begin{itemize}
+            \item センサー情報（\skyblue{観測変数}）からシステム内部情報（\red{状態変数}）を推定
+            \item ある時刻までの観測情報から，それ以降の状態を予測することも可能
+        \end{itemize}
+        \item 新たに，\red{\textbf{Slice Kalman Filter}}を設計
+        \begin{itemize}
+            \item 拡張カルマンフィルタ：非線形な関係の扱いを可能に（omitted）
+            \item 可変的な観測変数：毎時刻変化する観測の次元数に対応（omitted）
+        \end{itemize}
+        \myfigure{slide/5-4.pdf}
+    \end{itemize}
 \end{frame}
 
-% \begin{frame}[noframenumbering]{提案手法の全体像}
-%     \begin{itemize}
-%         \item 口頭
-%         \begin{itemize}
-%             \item 
-%         \end{itemize}
-%         \item 図
-%     \end{itemize}
-% \end{frame}
-\begin{frame}{提案手法の全体像}
-    \uline{時刻$t$における処理}
-    \myfigure[0.8]{slide/slide10.pdf}
+\begin{frame}{既存技術：Tracking-by-Detection}
+    \begin{block}{Tracking-by-Detection}
+        \begin{enumerate}
+            \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
+            \\\ra (e.g.) YOLO：約$10^2$fps
+            \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
+            \\\ra (e.g) SORT：約$3\times10^2$fps
+        \end{enumerate}        
+    \end{block}
+    \myfigure{slide/6-1.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{既存技術：Tracking-by-Detection}
+    \begin{block}{Tracking-by-Detection}
+        \begin{enumerate}
+            \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
+            \\\ra (e.g.) YOLO：約$10^2$fps
+            \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
+            \\\ra (e.g) SORT：約$3\times10^2$fps
+        \end{enumerate}        
+    \end{block}
+    \myfigure{slide/6-2.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{既存技術：Tracking-by-Detection}
+    \begin{block}{Tracking-by-Detection}
+        \begin{enumerate}
+            \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
+            \\\ra (e.g.) YOLO：約$10^2$fps
+            \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
+            \\\ra (e.g) SORT：約$3\times10^2$fps
+        \end{enumerate}        
+    \end{block}
+    \myfigure{slide/6-3.pdf}
+\end{frame}
+
+\begin{frame}{本問題における既存技術の適用}
+    \begin{itemize}
+        \item 既存技術を適用するためにはどうしたらよいか？
+    \end{itemize}
+    \myfigure[0.7]{slide/7-1.pdf}
+    \phantom{\ra しかしながらこの場合$\dots$}
+    \vs
+    \begin{columns}
+        \begin{column}{.5\linewidth}
+            \phantom{\uline{理想のReID}}
+            \myfigure{slide/8-0.pdf}
+        \end{column}
+        \begin{column}{.5\linewidth}
+            \phantom{\uline{実際に得られるReID}}
+            \myfigure{slide/9-0.pdf}
+        \end{column}
+    \end{columns}
+\end{frame}
+\begin{frame}[noframenumbering]{本問題における既存技術の適用}
+    \begin{itemize}
+        \item 既存技術を適用するためにはどうしたらよいか？
+    \end{itemize}
+    \myfigure[0.7]{slide/7-2.pdf}
+    \phantom{\ra しかしながらこの場合$\dots$}
+    \vs
+    \begin{columns}
+        \begin{column}{.5\linewidth}
+            \phantom{\uline{理想のReID}}
+            \myfigure{slide/8-0.pdf}
+        \end{column}
+        \begin{column}{.5\linewidth}
+            \phantom{\uline{実際に得られるReID}}
+            \myfigure{slide/9-0.pdf}
+        \end{column}
+    \end{columns}
+\end{frame}
+\begin{frame}[noframenumbering]{本問題における既存技術の適用}
+    \begin{itemize}
+        \item 既存技術を適用するためにはどうしたらよいか？
+    \end{itemize}
+    \myfigure[.7]{slide/7-2.pdf}
+    \ra しかしながらこの場合$\dots$
+    \vs
+    \begin{columns}
+        \begin{column}{.5\linewidth}
+            \uline{理想のReID}
+            \myfigure{slide/8-1.pdf}
+        \end{column}
+        \begin{column}{.5\linewidth}
+            \uline{実際に得られるReID}
+            \myfigure{slide/9-1.pdf}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{DepthSORTによるスライドを跨いだReID}
+    \begin{itemize}
+        \item スライスを跨いだ，ReIDを行いたい
+        \begin{itemize}
+            \item 既存技術：他のスライスでは，別個体として追跡してしまう
+            \item[\phantom{}] \phantom{提案手法：\red{\textbf{Depth-SORT}}によって，\red{高さ方向に追跡}を行う}
+        \end{itemize}
+    \end{itemize}
+    \myfigure{slide/10-0.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{DepthSORTによるスライドを跨いだReID}
+    \begin{itemize}
+        \item スライスを跨いだ，ReIDを行いたい
+        \begin{itemize}
+            \item 既存技術：他のスライスでは，別個体として追跡してしまう
+            \item[\red{$\blacktriangleright$}] 提案手法：\red{\textbf{Depth-SORT}}によって，\red{高さ方向に追跡}を行う
+        \end{itemize}
+    \end{itemize}
+    \myfigure{slide/10-1.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{DepthSORTによるスライドを跨いだReID}
+    \begin{itemize}
+        \item スライスを跨いだ，ReIDを行いたい
+        \begin{itemize}
+            \item 既存技術：他のスライスでは，別個体として追跡してしまう
+            \item[\red{$\blacktriangleright$}] 提案手法：\red{\textbf{Depth-SORT}}によって，\red{高さ方向に追跡}を行う
+        \end{itemize}
+    \end{itemize}
+    \myfigure{slide/10-3.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{DepthSORTによるスライドを跨いだReID}
+    \begin{itemize}
+        \item スライスを跨いだ，ReIDを行いたい
+        \begin{itemize}
+            \item 既存技術：他のスライスでは，別個体として追跡してしまう
+            \item[\red{$\blacktriangleright$}] 提案手法：\red{\textbf{Depth-SORT}}によって，\red{高さ方向に追跡}を行う
+        \end{itemize}
+    \end{itemize}
+    \myfigure{slide/10-4.pdf}
+\end{frame}
+\begin{frame}[noframenumbering]{DepthSORTによるスライドを跨いだReID}
+    \begin{itemize}
+        \item スライスを跨いだ，ReIDを行いたい
+        \begin{itemize}
+            \item 既存技術：他のスライスでは，別個体として追跡してしまう
+            \item[\red{$\blacktriangleright$}] 提案手法：\red{\textbf{Depth-SORT}}によって，\red{高さ方向に追跡}を行う
+        \end{itemize}
+    \end{itemize}
+    \myfigure{slide/10-5.pdf}
 \end{frame}
