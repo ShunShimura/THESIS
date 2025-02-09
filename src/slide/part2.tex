@@ -1,8 +1,8 @@
 \section{問題設定}
 
-\begin{frame}[noframenumbering]{目次}
-    \tableofcontents[currentsection]
-\end{frame}
+% \begin{frame}[noframenumbering]{目次}
+%     \tableofcontents[currentsection]
+% \end{frame}
 
 \begin{frame}{AIシステムによるリアルタイム複数細胞追跡}
     \begin{itemize}
@@ -45,7 +45,7 @@
         \item 時系列データが必要（$\because$ 移動する細胞を取得する）
         \item 三次元データが必要（$\because$ 酵素溶液処理により流体に満たされている）
     \end{itemize}
-    \ra 共焦点顕微鏡\cite{paddock2000principles}により，\red{複数の高さでスライスした二次元画像の時系列データ}を取得
+    \ra 共焦点顕微鏡\cite{paddock2000principles}で，\red{複数の高さでスライスした二次元画像の時系列データ}を取得
     \\\phantom{\ra \blue{\textbf{Challenging}}：画像の取得に，\blue{1秒/1枚}かかる}
     \myfigure{slide/slide4-1.pdf}
 \end{frame}
@@ -54,7 +54,7 @@
         \item 時系列データが必要（$\because$ 移動する細胞を取得する）
         \item 三次元データが必要（$\because$ 酵素溶液処理により流体に満たされている）
     \end{itemize}
-    \ra 共焦点顕微鏡\cite{paddock2000principles}により，\red{複数の高さでスライスした二次元画像の時系列データ}を取得
+    \ra 共焦点顕微鏡\cite{paddock2000principles}で，\red{複数の高さでスライスした二次元画像の時系列データ}を取得
     \\\ra \blue{\textbf{Challenging}}：画像の取得に，\blue{1秒/1枚}かかる
     \myfigure{slide/slide4-2.pdf}
 \end{frame}
@@ -75,7 +75,7 @@
     \end{itemize}
     \Ra トレードオフにより，\red{見えていない細胞を取りに行く必要}が生じる
     \vs
-    \begin{block}{AIシステムの有効性}
+    \begin{block}{Advantages of AI-System}
         \begin{enumerate}
             \item 時間的・空間的に疎なデータから，\red{追跡および高精度な位置予測}を行う
             \item 上記の処理を\red{高速}に行う
