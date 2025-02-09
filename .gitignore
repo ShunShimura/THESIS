@@ -8,6 +8,8 @@
 
 /fig/*.jpg
 
+/fig/*
+
 ./fig/.DS_Store
 
 .DS_Store

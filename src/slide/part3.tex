@@ -6,7 +6,7 @@
 
 \begin{frame}{カルマンフィルタによる三次元的な位置予測}
     \begin{itemize}
-        \item \uline{カルマンフィルタ}
+        \item \uline{カルマンフィルタ} \cite{bishop2001introduction}
         \begin{itemize}
             \item センサー情報（\skyblue{観測変数}）からシステム内部情報（\red{状態変数}）を推定
             \item ある時刻までの観測情報から，それ以降の状態を予測することも可能
@@ -21,7 +21,7 @@
 \end{frame}
 \begin{frame}[noframenumbering]{カルマンフィルタによる三次元的な位置予測}
     \begin{itemize}
-        \item \uline{カルマンフィルタ}
+        \item \uline{カルマンフィルタ} \cite{bishop2001introduction}
         \begin{itemize}
             \item センサー情報（\skyblue{観測変数}）からシステム内部情報（\red{状態変数}）を推定
             \item ある時刻までの観測情報から，それ以降の状態を予測することも可能
@@ -36,7 +36,7 @@
 \end{frame}
 \begin{frame}[noframenumbering]{カルマンフィルタによる三次元的な位置予測}
     \begin{itemize}
-        \item \uline{カルマンフィルタ}
+        \item \uline{カルマンフィルタ} \cite{bishop2001introduction}
         \begin{itemize}
             \item センサー情報（\skyblue{観測変数}）からシステム内部情報（\red{状態変数}）を推定
             \item ある時刻までの観測情報から，それ以降の状態を予測することも可能
@@ -51,7 +51,7 @@
 \end{frame}
 \begin{frame}[noframenumbering]{カルマンフィルタによる三次元的な位置予測}
     \begin{itemize}
-        \item \uline{カルマンフィルタ}
+        \item \uline{カルマンフィルタ} \cite{bishop2001introduction}
         \begin{itemize}
             \item センサー情報（\skyblue{観測変数}）からシステム内部情報（\red{状態変数}）を推定
             \item ある時刻までの観測情報から，それ以降の状態を予測することも可能
@@ -66,34 +66,34 @@
 \end{frame}
 
 \begin{frame}{既存技術：Tracking-by-Detection}
-    \begin{block}{Tracking-by-Detection}
+    \begin{block}{Tracking-by-Detection \cite{luo2021multiple}}
         \begin{enumerate}
             \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
-            \\\ra (e.g.) YOLO：約$10^2$fps
+            \\\ra (e.g.) YOLO：約$10^2$fps \cite{redmon2016you,wang2024yolov10}
             \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
-            \\\ra (e.g) SORT：約$3\times10^2$fps
+            \\\ra (e.g) SORT：約$3\times10^2$fps \cite{bewley2016simple,wojke2017simple,du2023strongsort}
         \end{enumerate}        
     \end{block}
     \myfigure{slide/6-1.pdf}
 \end{frame}
 \begin{frame}[noframenumbering]{既存技術：Tracking-by-Detection}
-    \begin{block}{Tracking-by-Detection}
+    \begin{block}{Tracking-by-Detection \cite{luo2021multiple}}
         \begin{enumerate}
             \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
-            \\\ra (e.g.) YOLO：約$10^2$fps
+            \\\ra (e.g.) YOLO：約$10^2$fps \cite{redmon2016you,wang2024yolov10}
             \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
-            \\\ra (e.g) SORT：約$3\times10^2$fps
+            \\\ra (e.g) SORT：約$3\times10^2$fps \cite{bewley2016simple,wojke2017simple,du2023strongsort}
         \end{enumerate}        
     \end{block}
     \myfigure{slide/6-2.pdf}
 \end{frame}
 \begin{frame}[noframenumbering]{既存技術：Tracking-by-Detection}
-    \begin{block}{Tracking-by-Detection}
+    \begin{block}{Tracking-by-Detection \cite{luo2021multiple}}
         \begin{enumerate}
             \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
-            \\\ra (e.g.) YOLO：約$10^2$fps
+            \\\ra (e.g.) YOLO：約$10^2$fps \cite{redmon2016you,wang2024yolov10}
             \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
-            \\\ra (e.g) SORT：約$3\times10^2$fps
+            \\\ra (e.g) SORT：約$3\times10^2$fps \cite{bewley2016simple,wojke2017simple,du2023strongsort}
         \end{enumerate}        
     \end{block}
     \myfigure{slide/6-3.pdf}
