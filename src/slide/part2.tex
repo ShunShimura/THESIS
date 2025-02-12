@@ -61,20 +61,21 @@
 
 \begin{frame}{AIシステムによる見えない細胞の位置予測}
     \begin{itemize}
-        \item 高い時間分解能が必要
+        \item \uline{高い時間分解能が必要}（スライス数 少）
         \begin{itemize}
             \item 動く細胞を追従して細胞を追跡しなければならない
             \item 元住所を保持するために，FPSは上げておきたい
         \end{itemize}
-        \vs
-        \item 高い空間分解能が必要
+        \vspace{.3zh}
+        \item \uline{高い空間分解能が必要}（スライス数 多）
         \begin{itemize}
             \item ロボットによる取得のために，高精度に位置を知りたい
             \item できる限りすべての細胞を見逃したくない
         \end{itemize}
     \end{itemize}
-    \Ra トレードオフにより，\red{見えていない細胞を取りに行く必要}が生じる
     \vs
+    \Ra トレードオフにより，\red{見えていない細胞を取りに行く必要}が生じる
+    \vspace{1.5zh}
     \begin{block}{Advantages of AI-System}
         \begin{enumerate}
             \item 時間的・空間的に疎なデータから，\red{追跡および高精度な位置予測}を行う

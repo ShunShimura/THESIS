@@ -13,6 +13,7 @@
     \uline{評価（1）予測位置および正解位置の可視化}
     \begin{columns}
         \begin{column}{.6\linewidth}
+            \vspace{-1zh}
             \begin{figure}
                 \animategraphics[autoplay, loop, width=0.8\linewidth]{20}{fig/slide/3d_spheres_seed358/t}{001}{060}
             \end{figure}              
@@ -36,13 +37,14 @@
             \vspace{-2.5zh}
             \begin{itemize}
                 \item[$\blacktriangleright$] 横軸は時刻を表すステップ
-                \item[$\blacktriangleright$] 予測と正解の\uline{IoU}$^1$を計算
+                \item[$\blacktriangleright$] 予測と正解の\uline{IoU}$^2$を計算
                 \item[$\blacktriangleright$] 常にほとんど$1.0$（\red{good}）
             \end{itemize}
         \end{column}
     \end{columns}
-    \setcounter{footnote}{1}
-    \footnotetext{Intersection of Union: 和領域に対する積領域の割合}
+    \vspace{0.5zh}
+    \setcounter{footnote}{2}
+    \footnotetext{\scriptsize{Intersection of Union: 和領域に対する積領域の割合}}
 \end{frame}
 
 \begin{frame}{遊離した細胞の自動分取}
@@ -71,7 +73,7 @@
 \end{frame}
 \begin{frame}[noframenumbering]{遊離した細胞の自動分取}
     \begin{figure}
-        \animategraphics[autoplay, loop, width=\linewidth]{10}{fig/slide/success_long/frame_}{0000}{0165}
+        \animategraphics[autoplay, loop, width=\linewidth]{8}{fig/slide/success_long/frame_}{0000}{0165}
     \end{figure}
     % \myfigure{slide/success/frame_0000.png}
 \end{frame}
