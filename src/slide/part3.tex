@@ -19,6 +19,7 @@
         \end{itemize}
     \end{itemize}
     \myfigure{slide/5-1.pdf}
+    \footnotetext{\cite{bishop2001introduction} \citeauthor{bishop2001introduction} (\citeyear{bishop2001introduction})}
 \end{frame}
 \begin{frame}[noframenumbering]{カルマンフィルタによる三次元的な位置予測}
     \begin{itemize}
@@ -35,40 +36,71 @@
         \end{itemize}
     \end{itemize}
     \myfigure{slide/5-4.pdf}
+    \footnotetext{\cite{bishop2001introduction} \citeauthor{bishop2001introduction} (\citeyear{bishop2001introduction})}
 \end{frame}
 
 \begin{frame}{既存技術：Tracking-by-Detection}
     \begin{block}{Tracking-by-Detection \cite{luo2021multiple}}
         \begin{enumerate}
             \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
-            \\\ra (e.g.) YOLO：約$10^2$fps \cite{redmon2016you,wang2024yolov10}
+            \\\ra (e.g.) YOLO：約$10^2$\ fps \cite{redmon2016you,wang2024yolov10}
             \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
-            \\\ra (e.g) SORT：約$3\times10^2$fps \cite{bewley2016simple,wojke2017simple,du2023strongsort}
+            \\\ra (e.g) SORT：約$3\times10^2$\ fps \cite{bewley2016simple,du2023strongsort}
         \end{enumerate}        
     \end{block}
-    \myfigure{slide/6-1.pdf}
+    \myfigure[0.9]{slide/6-1.pdf}
+    \vs
+    \footnotetext{
+        \cite{luo2021multiple} \citeauthor{luo2021multiple} (\citeyear{luo2021multiple}), 
+        \cite{redmon2016you} \citeauthor{redmon2016you} (\citeyear{redmon2016you}), 
+        \cite{wang2024yolov10} \citeauthor{wang2024yolov10} (\citeyear{wang2024yolov10}), 
+    }
+    \footnotetext{
+        \cite{bewley2016simple} \citeauthor{bewley2016simple} (\citeyear{bewley2016simple}), 
+        \cite{du2023strongsort} \citeauthor{du2023strongsort} (\citeyear{du2023strongsort}), 
+        }
 \end{frame}
-\begin{frame}[noframenumbering]{既存技術：Tracking-by-Detection}
+\begin{frame}{既存技術：Tracking-by-Detection}
     \begin{block}{Tracking-by-Detection \cite{luo2021multiple}}
         \begin{enumerate}
             \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
-            \\\ra (e.g.) YOLO：約$10^2$fps \cite{redmon2016you,wang2024yolov10}
+            \\\ra (e.g.) YOLO：約$10^2$\ fps \cite{redmon2016you,wang2024yolov10}
             \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
-            \\\ra (e.g) SORT：約$3\times10^2$fps \cite{bewley2016simple,wojke2017simple,du2023strongsort}
+            \\\ra (e.g) SORT：約$3\times10^2$\ fps \cite{bewley2016simple,du2023strongsort}
         \end{enumerate}        
     \end{block}
-    \myfigure{slide/6-2.pdf}
+    \myfigure[0.9]{slide/6-2.pdf}
+    \vs
+    \footnotetext{
+        \cite{luo2021multiple} \citeauthor{luo2021multiple} (\citeyear{luo2021multiple}), 
+        \cite{redmon2016you} \citeauthor{redmon2016you} (\citeyear{redmon2016you}), 
+        \cite{wang2024yolov10} \citeauthor{wang2024yolov10} (\citeyear{wang2024yolov10}), 
+    }
+    \footnotetext{
+        \cite{bewley2016simple} \citeauthor{bewley2016simple} (\citeyear{bewley2016simple}), 
+        \cite{du2023strongsort} \citeauthor{du2023strongsort} (\citeyear{du2023strongsort}), 
+        }
 \end{frame}
-\begin{frame}[noframenumbering]{既存技術：Tracking-by-Detection}
+\begin{frame}{既存技術：Tracking-by-Detection}
     \begin{block}{Tracking-by-Detection \cite{luo2021multiple}}
         \begin{enumerate}
             \item 各画像を入力して，画像に映る物体をバウンディングボックス（\red{$\square$}）で検出
-            \\\ra (e.g.) YOLO：約$10^2$fps \cite{redmon2016you,wang2024yolov10}
+            \\\ra (e.g.) YOLO：約$10^2$\ fps \cite{redmon2016you,wang2024yolov10}
             \item 各バウンディングボックスに，個体を識別するためのIDを割り振り（ReID）
-            \\\ra (e.g) SORT：約$3\times10^2$fps \cite{bewley2016simple,wojke2017simple,du2023strongsort}
+            \\\ra (e.g) SORT：約$3\times10^2$\ fps \cite{bewley2016simple,du2023strongsort}
         \end{enumerate}        
     \end{block}
-    \myfigure{slide/6-3.pdf}
+    \myfigure[0.9]{slide/6-3.pdf}
+    \vs
+    \footnotetext{
+        \cite{luo2021multiple} \citeauthor{luo2021multiple} (\citeyear{luo2021multiple}), 
+        \cite{redmon2016you} \citeauthor{redmon2016you} (\citeyear{redmon2016you}), 
+        \cite{wang2024yolov10} \citeauthor{wang2024yolov10} (\citeyear{wang2024yolov10}), 
+    }
+    \footnotetext{
+        \cite{bewley2016simple} \citeauthor{bewley2016simple} (\citeyear{bewley2016simple}), 
+        \cite{du2023strongsort} \citeauthor{du2023strongsort} (\citeyear{du2023strongsort}), 
+        }
 \end{frame}
 
 \begin{frame}{本問題における既存技術の適用}

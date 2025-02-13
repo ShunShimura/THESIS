@@ -1,10 +1,10 @@
 %%%% usepackage %%%
 %optionなしpackage
 \usepackage{amsmath,mathtools,amssymb,amsfonts}%数式関係
-\usepackage{bm,wasysym,pxjahyper,color,ulem,array,arydshln,url,natbib}%文字・文章関係
+\usepackage{bm,wasysym,pxjahyper,color,ulem,array,arydshln,url}%文字・文章関係
 \usepackage{tcolorbox,multicol,textpos,algorithm,algorithmic,xparse}%構成関係
 \usepackage{subfig,wrapfig,here,tikz,caption,graphicx,animate}%図関係
-
+\usepackage[numbers]{natbib}
 
 %library
 \tcbuselibrary{skins} % tcolorboxでenhancedを利用
@@ -166,3 +166,4 @@
 \renewcommand\algorithmicrequire{\textbf{Input:}}
 \renewcommand\algorithmicensure{\textbf{Output:}}
 \renewcommand{\kanjifamilydefault}{\gtdefault}% 既定をゴシック体に
+\renewcommand{\thefootnote}{}{\footnotetext{}}
