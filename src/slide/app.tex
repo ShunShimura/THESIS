@@ -3,7 +3,14 @@
 \end{frame}
 
 \begin{frame}[noframenumbering]{SORTのアルゴリズム}
-    \myfigure{sort.pdf}    
+    \begin{block}{Algorithm of SORT}
+        \begin{enumerate}
+            \item 過去の観測変数からバウンディングボックスを予測
+            \item 予測位置と検出位置を比較し，ReID
+            \item これを繰り返す
+        \end{enumerate}        
+    \end{block}
+    \myfigure{sort.pdf}
 \end{frame}
 
 \begin{frame}[noframenumbering]{SORT + Depth-SORT}
@@ -71,4 +78,8 @@
             \\ & \phantom{\textbf{where }} r_t^{\text{app}} = \sqrt{r_t^2 - \left\{(s-1) \delta z - (z_t + \dot{z} (s-1) t_c)\right\}^2}
         \end{aligned}
     \end{equation}
+\end{frame}
+
+\begin{frame}[noframenumbering]{元住所の特定}
+    \myfigure{slide/azimuth_320.jpg}
 \end{frame}
